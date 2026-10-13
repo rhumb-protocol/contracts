@@ -728,7 +728,10 @@ Entry points (§3.2):
   when the entry is absent; `announcements() -> Announcements { upgrade: Option<UpgradeAt>,
   rate: Option<RateAt>, roles: Option<RolesAt>, cap: Option<CapAt> }`, the four standing
   announcements, read-only, so the watchtower reads them at its start and the 24-hour
-  exception of I-003 rule 23 goes (I-003 §3.1 point 9).
+  exception of I-003 rule 23 goes (I-003 §3.1 point 9); and so that the watchtower's own
+  record of announcements is a cache and the chain the witness: a database that does not
+  know the chain's time cannot refuse a row with a self-chosen `at`, and the view can (added
+  2026-10-13, I-003 header (ae)).
 
 Errors (§3.5): `23` `AboveCurve`; `OutOfRange` (10) also a `pause` whose `rule` the caller
 may not use. Events (§3.5): `pause` carries `rule` in its data; `roles` and `cap` carry
