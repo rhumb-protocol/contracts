@@ -1,0 +1,19 @@
+[package]
+name = "sep40-mock"
+version = "0.1.0"
+description = "Test-only SEP-40 price feed contract for the reference tests of spec A-001"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+soroban-sdk = { workspace = true }

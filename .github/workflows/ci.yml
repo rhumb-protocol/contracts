@@ -1,0 +1,219 @@
+name: ci
+# The crates, their Wasm and the artefacts adapter-wasm and test-wasm. This workflow names no
+# secret and no token.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Nightly and by hand as well: every job keeps the triggers it had before the workflow was
+  # split, and the check job ran on all four.
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+      - name: Install pinned toolchain
+        run: rustup show   # reads rust-toolchain.toml and installs channel, components, targets
+      # Every cargo invocation below passes --locked: what CI builds and tests is the committed
+      # lockfile, and a dependency that resolved to something else fails the run instead of
+      # being picked up quietly (spec A-001 section 3.6).
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Test on host
+        run: cargo test --locked --workspace
+      - name: Build for Wasm
+        run: cargo build --locked --workspace --release --target wasm32v1-none
+      - name: Test on host again, against the built Wasm
+        # The contract tests skip with a notice when a Wasm is missing, so that a working copy
+        # without a Wasm build is not a wall of failures. ADAPTER_WASM_REQUIRED turns the skip
+        # into a failure, and CI sets it after the build: a green CI must never be able to mean
+        # that the tests found nothing to run.
+        run: cargo test --locked --workspace
+        env:
+          ADAPTER_WASM_REQUIRED: "1"
+      - name: The coverage exclusions hold no logic
+        # The coverage gate below excludes four files, because they hold nothing but the SDK's
+        # macro invocations and E-007 section 6 excludes macro-generated lines. An exclusion by
+        # file name is only honest while the file stays that way, and a reviewer who has to
+        # remember that is not a check. So: no line in any excluded file may open a function
+        # body. A declaration inside the contractclient trait ends in a semicolon and passes;
+        # anything with a brace fails, and whoever added it moves it or drops the exclusion.
+        run: |
+          status=0
+          for f in crates/adapter-redstone/src/types.rs \
+                   crates/adapter-redstone/src/sep40.rs \
+                   crates/adapter-issuer/src/types.rs; do
+            if grep -nE 'fn [A-Za-z_][A-Za-z0-9_]*.*\{' "$f"; then
+              echo "$f is excluded from the coverage gate but now holds a function body"
+              status=1
+            fi
+          done
+          exit "$status"
+      - name: Line coverage of the two contract crates (A-001 section 6)
+        # 100 % of each contract crate's own source. The test modules are the measurement, not
+        # the subject; sep40-mock is test-only and never deployed; and the four files above
+        # hold only the SDK's macro attributes, whose lines E-007 section 6 excludes for the
+        # same reason core does. The paths are anchored on a separator so that a file added
+        # later under another crate cannot fall into the exclusion by sharing a name.
+        run: |
+          cargo install cargo-llvm-cov --version 0.6.22 --locked
+          cargo llvm-cov --locked --workspace --summary-only --fail-under-lines 100 \
+            --ignore-filename-regex '(/src/test/|/sep40-mock/|/pool-integration/|/adapter-redstone/src/(types|sep40)\.rs$|/adapter-issuer/src/types\.rs$)'
+        env:
+          ADAPTER_WASM_REQUIRED: "1"
+      - name: Wasm size bound (E-007 section 3.7)
+        run: |
+          status=0
+          shopt -s nullglob
+          for wasm in target/wasm32v1-none/release/*.wasm; do
+            size=$(wc -c < "$wasm")
+            echo "$(basename "$wasm"): $size bytes (bound 122880)"
+            if [ "$size" -ge 122880 ]; then status=1; fi
+          done
+          exit "$status"
+      - name: No secrets in the tree
+        run: scripts/scan-secrets.sh
+      - name: The public scripts parse and pass shellcheck
+        # Pinned by digest as well as by tag: a tag can be pushed again, a digest cannot. `-x`
+        # follows the `source` of the tests' helpers, so that what they share is checked where
+        # it is used.
+        run: |
+          for f in scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh; do
+            bash -n "$f"
+          done
+          docker run --rm -v "$PWD:/mnt" -w /mnt \
+            koalaman/shellcheck:v0.10.0@sha256:2097951f02e735b613f4a34de20c40f937a6c8f18ecb170612c88c34517221fb \
+            --severity=style -x \
+            scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh
+      - name: Hygiene (spec A-001 section 4 test 8)
+        # The name of an assistant anywhere but in spec/. The names are built from halves here,
+        # the way scripts/scan-secrets.sh builds the seed pattern, so that the check never
+        # matches its own source. The word "agent" is not searched for: it is the HTTP client's
+        # own term (a user agent).
+        run: |
+          names="cla""ude|anthr""opic|copi""lot|generated wi""th|co-author""ed-by"
+          if git grep -n -i -E "$names" -- . ':(exclude)spec'; then
+            echo "an assistant is named outside spec/"
+            exit 1
+          fi
+      - name: A green run cannot mean that nothing ran
+        # The *_REQUIRED flags above are what turn a skipped test into a failed one, and they are
+        # only worth anything while they are raised: a flag at "0", or a flag no step sets, hands
+        # the skip back. This also holds the other half of the rule -- that the last command of a
+        # test script is the one whose exit status is the verdict. It reads this workflow, the
+        # crates and scripts/tests/.
+        run: scripts/check-ci-gates.sh
+      - name: The tests of the public scripts
+        run: scripts/tests/run.sh
+
+  adapter-wasm:
+    # The artefact fetch-artefacts.sh downloads and checks against the sha256 this job's log
+    # prints. On a push to main only: an artefact of a branch is bytes nobody reviewed, and the
+    # [artefacts] table names a commit on main.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+      - name: Install pinned toolchain
+        run: rustup show
+      - name: Build
+        run: cargo build --locked --workspace --release --target wasm32v1-none
+      - name: Install binaryen version_132, as core pins it
+        # The same binaryen core uses, pinned by the same sha256 of the same release tarball,
+        # so that the adapters are optimised by the optimiser the pool and the router were.
+        # A download whose hash differs fails the job before anything is extracted.
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/binaryen"
+          mkdir -p "$dir"
+          curl -sSfL -o "$dir/binaryen.tar.gz" \
+            https://github.com/WebAssembly/binaryen/releases/download/version_132/binaryen-version_132-x86_64-linux.tar.gz
+          echo "195ddc94f9bc89f45abdabb0b9eea86023d727ba90eac8b35b80f2544fc30572  $dir/binaryen.tar.gz" | sha256sum -c -
+          tar -xzf "$dir/binaryen.tar.gz" -C "$dir"
+          echo "$dir/binaryen-version_132/bin" >> "$GITHUB_PATH"
+          "$dir/binaryen-version_132/bin/wasm-opt" --version
+      - name: Optimise the two adapters with wasm-opt
+        # The same flags core applies, which are the ones `stellar contract optimize` applies:
+        # optimise for size aggressively, run the passes to convergence, the MVP feature set
+        # plus mutable globals, sign extension and bulk memory. Same optimiser, same flags,
+        # same bytes on every network.
+        run: |
+          set -euo pipefail
+          mkdir -p artefacts
+          for name in adapter_redstone adapter_issuer; do
+            wasm="target/wasm32v1-none/release/$name.wasm"
+            before=$(wc -c < "$wasm")
+            wasm-opt -Oz --converge --mvp-features --enable-mutable-globals --enable-sign-ext --enable-bulk-memory \
+              "$wasm" -o "artefacts/$name.wasm"
+            echo "$name.wasm: $before bytes before wasm-opt, $(wc -c < "artefacts/$name.wasm") bytes after"
+          done
+      - name: The sha256 of record
+        # This is the hash the [artefacts] table copies. The .sha256 files beside the Wasm are
+        # written for convenience and are never what a deployment trusts.
+        run: |
+          cd artefacts
+          for f in *.wasm; do
+            sha256sum "$f" | tee "${f}.sha256"
+            echo "$f: $(wc -c < "$f") bytes (bound 122880)"
+            [ "$(wc -c < "$f")" -lt 122880 ]
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: adapter-wasm
+          path: artefacts/
+
+  test-wasm:
+    # The SEP-40 mock, optimised and hashed by the rule of adapter-wasm: the local rollout deploys
+    # it, and a mock taken from CI bytes is a mock whose sha256 a reader can check in this job's
+    # log. It is a test crate with no key and is never deployed to a network whose contracts are
+    # kept. On a push to main only, as adapter-wasm.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+      - name: Install pinned toolchain
+        run: rustup show
+      - name: Build
+        run: cargo build --locked --workspace --release --target wasm32v1-none
+      - name: Install binaryen version_132, as core pins it
+        # The same binaryen and the same sha256 as the adapter-wasm job.
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/binaryen"
+          mkdir -p "$dir"
+          curl -sSfL -o "$dir/binaryen.tar.gz" \
+            https://github.com/WebAssembly/binaryen/releases/download/version_132/binaryen-version_132-x86_64-linux.tar.gz
+          echo "195ddc94f9bc89f45abdabb0b9eea86023d727ba90eac8b35b80f2544fc30572  $dir/binaryen.tar.gz" | sha256sum -c -
+          tar -xzf "$dir/binaryen.tar.gz" -C "$dir"
+          echo "$dir/binaryen-version_132/bin" >> "$GITHUB_PATH"
+          "$dir/binaryen-version_132/bin/wasm-opt" --version
+      - name: Optimise the mock with wasm-opt
+        # The flags of the adapter-wasm job.
+        run: |
+          set -euo pipefail
+          mkdir -p artefacts
+          wasm="target/wasm32v1-none/release/sep40_mock.wasm"
+          before=$(wc -c < "$wasm")
+          wasm-opt -Oz --converge --mvp-features --enable-mutable-globals --enable-sign-ext --enable-bulk-memory \
+            "$wasm" -o "artefacts/sep40_mock.wasm"
+          echo "sep40_mock.wasm: $before bytes before wasm-opt, $(wc -c < "artefacts/sep40_mock.wasm") bytes after"
+      - name: The sha256 of record
+        # The hash a deployment of the mock checks against; the .sha256 file beside it is written
+        # for convenience and is never what anything trusts.
+        run: |
+          set -euo pipefail
+          cd artefacts
+          sha256sum sep40_mock.wasm | tee sep40_mock.wasm.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: test-wasm
+          path: artefacts/

@@ -1,0 +1,23 @@
+[package]
+name = "adapter-redstone"
+version = "0.1.0"
+description = "Rate adapter that wraps a SEP-40 price feed of RedStone for a band pool (spec A-001)"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+soroban-sdk = { workspace = true, features = ["testutils"] }

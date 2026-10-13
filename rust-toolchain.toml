@@ -1,0 +1,9 @@
+[toolchain]
+# Exact version, never "stable". The same pin as the engine in wadrock/core; it is bumped here
+# only when core bumps it, in its own commit.
+# The version must be at least 1.85: the wasm32v1-none target does not exist before that, and
+# since Rust 1.82 soroban-sdk no longer accepts contracts built for wasm32-unknown-unknown.
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32v1-none"]
+profile = "minimal"

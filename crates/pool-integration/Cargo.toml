@@ -1,0 +1,29 @@
+[package]
+name = "pool-integration"
+version = "0.1.0"
+description = "The reference test of spec A-001 section 4 test 4: the two adapters driven through the engine's pool Wasm"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+doctest = false
+
+[lints]
+workspace = true
+
+[features]
+# The constructor value of a pool in the CLI's JSON (`constructor_args`), for a host crate that
+# compares a deployment's value with it. A host-only module; no contract build turns it on.
+cli = []
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+adapter-issuer = { path = "../adapter-issuer" }
+adapter-redstone = { path = "../adapter-redstone" }
+soroban-sdk = { workspace = true, features = ["testutils"] }

@@ -1,0 +1,41 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/rhumb-protocol/contracts"
+rust-version = "1.98.1"   # same value as rust-toolchain.toml
+
+[workspace.dependencies]
+# Exact versions only, never a caret or tilde. soroban-sdk follows the version the engine pins
+# in wadrock/core and is bumped only together with core.
+soroban-sdk = "=27.0.6"
+proptest = { version = "=1.11.0", default-features = false, features = ["std"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+
+[workspace.lints.clippy]
+float_arithmetic = "deny"
+arithmetic_side_effects = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true
+
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true
