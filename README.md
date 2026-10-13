@@ -27,7 +27,9 @@ copied here; these crates call the engine's contracts through their Wasm interfa
   in the log, on a push to `main`.
 
 ## Specifications
-The specifications are copies; they are never edited here.
+The specifications are copies; they are never edited here. `spec/` comes from governance
+through `scripts/sync-specs.sh`, which copies the files `spec/LIST` names; a change to a
+specification is made in governance and synced, never written in this repository.
 - A-001 — the rate adapters.
 - A-007 — the aggregator adapter, when it is built.
 - E-003 — the rate provider interface the adapters implement.
