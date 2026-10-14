@@ -13,21 +13,36 @@
 # It reads every workflow or it is red: offline, no configuration file, no inline ignore, and a
 # workflow it cannot parse is an error (`--strict-collection`), never a workflow it skipped. The
 # persona is `auditor`, the one that also reports a checkout whose setting is written `true`. It is
-# given the `.yml` files themselves, so that no ignore file in the directory hides one, and none is
-# a stop.
+# given the workflow files themselves, so that no ignore file in the directory hides one, and none
+# is a stop.
+#
+# GitHub runs every `.yml` and `.yaml` file in .github/workflows, so every one of them is read,
+# those whose name starts with a dot included. Anything else in that directory -- another
+# extension, the same one in capitals, an ignore file, a directory -- is a file this check does
+# not read, and a stop that names it: a workflow nobody read must never pass.
 #
 # zizmor reads a checkout only in its canonical spelling, while GitHub splits a `uses` on `/` and
 # `\` and drops the empty pieces, so `actions//checkout@...` is the checkout to the runner and none
-# to zizmor (found in a security review). So every `uses`, of a step and of a job, is first
+# to zizmor. So every `uses`, of a step and of a job, is first
 # read as a YAML value by a second parser -- yq, MIT, version 4.53.6 of 2026-08-20, by the digest of
 # its image -- and must be canonical: `owner/repo[/path]@<40 hex>` with no empty, `.` or `..` piece
 # and no leading slash, or `docker://...`. Anything else is a stop. The same yq reads
 # zizmor's findings, so that a stop names the files of a kept checkout and no others.
 #
+# A step written as a YAML alias (`- *step`), which GitHub accepts, is refused: yq cannot take the
+# keys of an alias in the expression below, and an error of yq is a stop. That fails closed; such a
+# workflow writes the step out.
+#
 # Usage: scripts/check-checkouts.sh [repository root]   (a test may pass a tree of its own)
 set -uo pipefail
 
-ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
+# The root is made absolute: docker takes a relative path as the name of a volume, and would hand
+# both parsers an empty one. `--` keeps a root that starts with a dash a path, and CDPATH is
+# cleared so that `cd` prints nothing of its own into the root.
+if ! ROOT="$(CDPATH='' cd -- "${1:-$(dirname "$0")/..}" > /dev/null && pwd)"; then
+  echo "no repository root at ${1:-$(dirname "$0")/..}" >&2
+  exit 1
+fi
 # Pinned by tag as well as by digest: a tag can be pushed again, a digest cannot.
 IMAGE="ghcr.io/zizmorcore/zizmor:1.30.1@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101"
 YQ="mikefarah/yq:4.53.6@sha256:cfc4eee658595834ef304eadb0c3ea721f3b7cb6404ad8b7cb909cc5b5145b23"
@@ -39,13 +54,33 @@ RUNAS="$(id -u):$(id -g)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-# The workflows, by name, relative to the root: what both tools are given.
+# The workflows, by name, relative to the root: what both tools are given. Every entry of the
+# directory is looked at, those whose name starts with a dot included; what is not a `.yml` or
+# `.yaml` file is a stop.
 files=()
-for path in "$ROOT"/.github/workflows/*.yml; do
-  [ -f "$path" ] && files+=(".github/workflows/$(basename "$path")")
+unread=()
+shopt -s nullglob dotglob
+for path in "$ROOT"/.github/workflows/*; do
+  name="$(basename "$path")"
+  case "$name" in
+    *.yml | *.yaml)
+      if [ -f "$path" ] && [ ! -L "$path" ]; then
+        files+=(".github/workflows/$name")
+      else
+        unread+=("$name")
+      fi
+      ;;
+    *) unread+=("$name") ;;
+  esac
 done
+shopt -u nullglob dotglob
+if [ "${#unread[@]}" -gt 0 ]; then
+  echo "in $ROOT/.github/workflows, not a .yml or .yaml file this check reads; move or rename it:" >&2
+  printf '  %s\n' "${unread[@]}" >&2
+  exit 1
+fi
 if [ "${#files[@]}" -eq 0 ]; then
-  echo "no workflow named .yml under $ROOT/.github/workflows; a check of nothing is no check" >&2
+  echo "no workflow named .yml or .yaml under $ROOT/.github/workflows; a check of nothing is no check" >&2
   exit 1
 fi
 
@@ -123,6 +158,12 @@ if ! kept="$(docker run --rm --user "$RUNAS" -i "$YQ" -p=json \
   echo "yq could not read zizmor's findings" >&2
   exit 1
 fi
+case "$kept" in
+  '' | *[!0-9]*)
+    echo "yq gave no count of zizmor's findings, but [$kept]" >&2
+    exit 1
+    ;;
+esac
 if [ "$kept" -gt 0 ]; then
   echo "$kept checkout(s) keep their credentials; give each step persist-credentials: false in its with:" >&2
   docker run --rm --user "$RUNAS" -i "$YQ" -p=json \
