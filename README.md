@@ -21,6 +21,8 @@ copied here; these crates call the engine's contracts through their Wasm interfa
   Stellar secret key, or an `.env` file.
 - `scripts/check-ci-gates.sh` — fails when a required test could skip in CI, or a test script
   does not end on its verdict.
+- `scripts/check-checkouts.sh` — fails when a checkout in a workflow keeps its credentials, or a
+  `uses` is not spelled the one way both of its parsers read it.
 - `scripts/tests/` — the tests of the scripts above.
 - `.github/workflows/ci.yml` — the checks below on a push to `main`, on every pull request,
   nightly and by hand, and the artefacts `adapter-wasm` and `test-wasm`, each with its sha256
@@ -60,6 +62,7 @@ The scripts have tests of their own, and CI lints them with shellcheck:
 ```
 scripts/tests/run.sh
 scripts/check-ci-gates.sh
+scripts/check-checkouts.sh
 scripts/scan-secrets.sh
 ```
 

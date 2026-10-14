@@ -84,18 +84,23 @@ jobs:
           exit "$status"
       - name: No secrets in the tree
         run: scripts/scan-secrets.sh
+      - name: No checkout keeps its credentials
+        # The workflows read as YAML by two parsers pinned by tag and by digest, yq for the
+        # spelling of every uses and zizmor for its audit `artipacked` alone
+        # (scripts/check-checkouts.sh).
+        run: scripts/check-checkouts.sh
       - name: The public scripts parse and pass shellcheck
         # Pinned by digest as well as by tag: a tag can be pushed again, a digest cannot. `-x`
         # follows the `source` of the tests' helpers, so that what they share is checked where
         # it is used.
         run: |
-          for f in scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh; do
+          for f in scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh scripts/check-checkouts.sh; do
             bash -n "$f"
           done
           docker run --rm -v "$PWD:/mnt" -w /mnt \
             koalaman/shellcheck:v0.10.0@sha256:2097951f02e735b613f4a34de20c40f937a6c8f18ecb170612c88c34517221fb \
             --severity=style -x \
-            scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh
+            scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh scripts/check-checkouts.sh
       - name: Hygiene (spec A-001 section 4 test 8)
         # The name of an assistant anywhere but in spec/. The names are built from halves here,
         # the way scripts/scan-secrets.sh builds the seed pattern, so that the check never
