@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The public scripts parse and pass shellcheck in ci.yml: `scripts/tests/`,
-# `scripts/sync-specs.sh`, `scripts/scan-secrets.sh` and `scripts/check-ci-gates.sh`, with
-# the shellcheck image pinned by tag and digest.
+# `scripts/sync-specs.sh`, `scripts/scan-secrets.sh`, `scripts/check-ci-gates.sh` and
+# `scripts/check-checkouts.sh`, with the shellcheck image pinned by tag and digest.
 set -uo pipefail
 
 # shellcheck source=scripts/tests/helpers.sh
@@ -46,8 +46,8 @@ else
   fail "the step parses every file with bash -n"
 fi
 
-# The four names, each in the bash -n loop and in the shellcheck call, and nothing else.
-targets='scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh'
+# The five names, each in the bash -n loop and in the shellcheck call, and nothing else.
+targets='scripts/tests/*.sh scripts/sync-specs.sh scripts/scan-secrets.sh scripts/check-ci-gates.sh scripts/check-checkouts.sh'
 count="$(grep -cF -- "$targets" <<< "$step")"
 if [ "$count" = "2" ]; then
   pass "the step lints [$targets] in its bash -n loop and its shellcheck call"
@@ -55,7 +55,7 @@ else
   fail "the step lints [$targets] in its bash -n loop and its shellcheck call" "found it $count times"
 fi
 others="$(grep -oE 'scripts/[A-Za-z0-9._/*-]+' <<< "$step" | sort -u \
-  | grep -vxE 'scripts/tests/\*\.sh|scripts/sync-specs\.sh|scripts/scan-secrets\.sh|scripts/check-ci-gates\.sh')"
+  | grep -vxE 'scripts/tests/\*\.sh|scripts/sync-specs\.sh|scripts/scan-secrets\.sh|scripts/check-ci-gates\.sh|scripts/check-checkouts\.sh')"
 if [ -z "$others" ]; then
   pass "the step lints no other path"
 else
@@ -63,7 +63,7 @@ else
 fi
 
 for file in "$REPO_DIR"/scripts/sync-specs.sh "$REPO_DIR"/scripts/scan-secrets.sh \
-            "$REPO_DIR"/scripts/check-ci-gates.sh; do
+            "$REPO_DIR"/scripts/check-ci-gates.sh "$REPO_DIR"/scripts/check-checkouts.sh; do
   if [ -f "$file" ]; then
     pass "$(basename "$file") is there to lint"
   else
