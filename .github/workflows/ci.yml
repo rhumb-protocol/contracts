@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install pinned toolchain
         run: rustup show   # reads rust-toolchain.toml and installs channel, components, targets
       # Every cargo invocation below passes --locked: what CI builds and tests is the committed
@@ -123,6 +125,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install pinned toolchain
         run: rustup show
       - name: Build
@@ -180,6 +184,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install pinned toolchain
         run: rustup show
       - name: Build
