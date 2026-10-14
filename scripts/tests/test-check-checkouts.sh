@@ -176,7 +176,7 @@ case_of "a uses written in another case is a stop" 1 \
 # with is plain ASCII, or it is a stop.
 case_of "a key with a long s beside the setting is a stop" 1 \
   "$(printf '%s\n' "      - uses: actions/checkout@$SHA" "$WITH_FALSE" \
-    '          "perſiſt-credentials": true')"
+    '          "per\u017fi\u017ft-credentials": true')"
 case_of "a key that holds a NUL before the setting is a stop" 1 \
   "$(printf '%s\n' "      - uses: actions/checkout@$SHA" "        with:" \
     '          "persist-credentials=true\0": x' "          persist-credentials: false")"
@@ -188,15 +188,48 @@ tree_case "a job calling a reusable workflow spelled with an empty piece is a st
 tree_case "a job calling a reusable workflow by its canonical name passes" 0 "" "" \
   called.yml "$(workflow called "    uses: owner/repo/.github/workflows/x.yml@$SHA")"
 
-# zizmor is given the files themselves: a .gitignore inside the directory that names a workflow
-# does not hide it.
-tree_case "a workflow a .gitignore in the directory names is read all the same" 1 \
-  "probe.yml" "" \
-  .gitignore "probe.yml" \
-  probe.yml "$(workflow probe "$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" \
-    "      - uses: actions/checkout@$SHA")")" \
-  ok.yml "$(workflow ok "$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" \
-    "      - run: true")")"
+# GitHub runs every `.yml` and `.yaml` file in .github/workflows, so the check reads them all,
+# those whose name starts with a dot included; a workflow it does not read must never pass.
+KEPT="$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" "      - uses: actions/checkout@$SHA")"
+OK="$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" "      - run: true")"
+tree_case "a kept checkout in a .yaml workflow is a stop" 1 "probe.yaml" "" \
+  ok.yml "$(workflow ok "$OK")" probe.yaml "$(workflow probe "$KEPT")"
+tree_case "a kept checkout in a workflow whose name starts with a dot is a stop" 1 ".probe.yml" "" \
+  ok.yml "$(workflow ok "$OK")" .probe.yml "$(workflow probe "$KEPT")"
+tree_case "a .yaml workflow with the setting passes" 0 "" "" \
+  ok.yml "$(workflow ok "$OK")" \
+  fine.yaml "$(workflow fine "$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" \
+    "      - uses: actions/checkout@$SHA" "$WITH_FALSE")")"
+
+# Any other file in .github/workflows is one the check does not read, and a stop that names it:
+# an extension in capitals, a file of another kind, an ignore file beside the workflows, and a
+# directory.
+tree_case "a workflow with an upper-case extension is a stop" 1 "probe.YML" "" \
+  ok.yml "$(workflow ok "$OK")" probe.YML "$(workflow probe "$KEPT")"
+tree_case "a file of another kind beside the workflows is a stop" 1 "notes.txt" "" \
+  ok.yml "$(workflow ok "$OK")" notes.txt "a note"
+tree_case "an ignore file beside the workflows is a stop" 1 ".gitignore" "" \
+  ok.yml "$(workflow ok "$OK")" .gitignore "probe.yml"
+nested="$(scratch)"
+mkdir -p "$nested/.github/workflows/more"
+workflow ok "$OK" > "$nested/.github/workflows/ok.yml"
+workflow probe "$KEPT" > "$nested/.github/workflows/more/probe.yml"
+judge "a directory beside the workflows is a stop" 1 "$nested" "more"
+
+# A root given as a relative path is read as the same tree: the stop is the finding on its
+# workflow, not a parser that was handed an empty volume of that name.
+relative="$(scratch)"
+mkdir -p "$relative/.github/workflows"
+workflow probe "$KEPT" > "$relative/.github/workflows/probe.yml"
+output="$(cd "$(dirname "$relative")" && "$CHECK" "$(basename "$relative")" 2>&1)"
+rc=$?
+rm -rf "$relative"
+if [ "$rc" -ne 0 ] && grep -qF -- "keep their credentials" <<< "$output" \
+  && grep -qF -- "probe.yml" <<< "$output"; then
+  pass "a relative root is read, and its kept checkout named"
+else
+  fail "a relative root is read, and its kept checkout named" "exit $rc" "$output"
+fi
 
 # The stop names the files whose checkout keeps its credentials, and no file whose findings are
 # of another audit.
@@ -206,6 +239,30 @@ tree_case "the stop names the file of the kept checkout and not a file of other 
     "      - uses: actions/checkout@$SHA")")" \
   ok.yml "$(workflow ok "$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" \
     "      - run: true")")"
+
+# A workflow file that is a symbolic link is a stop that names the link, even when it points to a
+# workflow inside the tree that sets the setting: the parsers would read whatever the link reaches.
+linked="$(scratch)"
+mkdir -p "$linked/.github/workflows"
+workflow ok "$OK" > "$linked/.github/workflows/ok.yml"
+workflow fine "$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" \
+  "      - uses: actions/checkout@$SHA" "$WITH_FALSE")" > "$linked/fine.yml"
+ln -s ../../fine.yml "$linked/.github/workflows/link.yml"
+judge "a workflow file that is a symbolic link is a stop" 1 "$linked" "link.yml"
+
+# A root whose name starts with a dash is a path, not an option.
+dashed="$(scratch)"
+mkdir -p "$dashed/-tree/.github/workflows"
+workflow probe "$KEPT" > "$dashed/-tree/.github/workflows/probe.yml"
+output="$(cd "$dashed" && "$CHECK" -tree 2>&1)"
+rc=$?
+rm -rf "$dashed"
+if [ "$rc" -ne 0 ] && grep -qF -- "keep their credentials" <<< "$output" \
+  && grep -qF -- "probe.yml" <<< "$output"; then
+  pass "a root whose name starts with a dash is read, and its kept checkout named"
+else
+  fail "a root whose name starts with a dash is read, and its kept checkout named" "exit $rc" "$output"
+fi
 
 # A tree without a workflow is a stop: a check of nothing is no check.
 empty="$(scratch)"
