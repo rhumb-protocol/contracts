@@ -16,9 +16,9 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       - name: Install pinned toolchain
         run: rustup show   # reads rust-toolchain.toml and installs channel, components, targets
       # Every cargo invocation below passes --locked: what CI builds and tests is the committed
@@ -120,9 +120,9 @@ jobs:
     # prints. On a push to main only: an artefact of a branch is bytes nobody reviewed, and the
     # [artefacts] table names a commit on main.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       - name: Install pinned toolchain
         run: rustup show
       - name: Build
@@ -166,7 +166,7 @@ jobs:
             echo "$f: $(wc -c < "$f") bytes (bound 122880)"
             [ "$(wc -c < "$f")" -lt 122880 ]
           done
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a   # v7.0.1
         with:
           name: adapter-wasm
           path: artefacts/
@@ -177,9 +177,9 @@ jobs:
     # log. It is a test crate with no key and is never deployed to a network whose contracts are
     # kept. On a push to main only, as adapter-wasm.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       - name: Install pinned toolchain
         run: rustup show
       - name: Build
@@ -213,7 +213,7 @@ jobs:
           set -euo pipefail
           cd artefacts
           sha256sum sep40_mock.wasm | tee sep40_mock.wasm.sha256
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a   # v7.0.1
         with:
           name: test-wasm
           path: artefacts/
