@@ -216,6 +216,31 @@ workflow ok "$OK" > "$nested/.github/workflows/ok.yml"
 workflow probe "$KEPT" > "$nested/.github/workflows/more/probe.yml"
 judge "a directory beside the workflows is a stop" 1 "$nested" "more"
 
+# A name that holds a line break is a stop of its own that says so and names the file on one
+# line: the runner reads the job's output line by line, so a name printed as it stands is two
+# lines, the second of the name's choosing, and a command substitution drops a trailing line feed
+# and names another file. A carriage return ends a line for the runner as well. Each tree is made
+# here and removed by its name.
+for broken in $'probe\n.yml' $'probe.yml\n' $'probe\r.yml'; do
+  quoted="$(printf '%q' "$broken")"
+  dir="$(scratch)"
+  mkdir -p "$dir/.github/workflows"
+  workflow ok "$OK" > "$dir/.github/workflows/ok.yml"
+  workflow probe "$OK" > "$dir/.github/workflows/$broken"
+  output="$("$CHECK" "$dir" 2>&1)"
+  rc=$?
+  rm -rf "$dir"
+  if [ "$rc" -eq 0 ]; then
+    fail "a workflow named $quoted is a stop" "exit 0, expected a stop" "$output"
+  elif ! grep -qF -- "line break" <<< "$output"; then
+    fail "a workflow named $quoted is a stop" "the output does not say line break" "$output"
+  elif ! grep -qxF -- "  $quoted" <<< "$output"; then
+    fail "a workflow named $quoted is a stop" "the output does not name it on one line" "$output"
+  else
+    pass "a workflow named $quoted is a stop"
+  fi
+done
+
 # A root given as a relative path is read as the same tree: the stop is the finding on its
 # workflow, not a parser that was handed an empty volume of that name.
 relative="$(scratch)"
