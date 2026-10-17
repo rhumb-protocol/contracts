@@ -106,6 +106,7 @@ if grep -qxF "updated: spec/E-003-rate-provider.md" <<< "$out" \
 else
   fail "only the changed spec is reported" "$out"
 fi
+rm -rf "$dir"
 
 # --- Nothing is ever deleted ---------------------------------------------------------------------
 
@@ -119,6 +120,7 @@ if [ "$status" -eq 0 ] && [ -f "$dir/repo/spec/X-050-dropped.md" ]; then
 else
   fail "a spec in spec/ that the list does not name stays" "status $status" "$out"
 fi
+rm -rf "$dir"
 
 # --- What the script refuses, and that it then copies nothing -----------------------------------
 #
@@ -143,6 +145,7 @@ refuses() {
   else
     fail "$what copies nothing" "found:" "$found"
   fi
+  rm -rf "$dir"
 }
 
 refuses "a name that is not a file in governance" "X-404-missing.md" \
@@ -177,6 +180,7 @@ if [ "$status" -eq 1 ] && grep -qF 'e-000b-recipe.md' <<< "$out" && [ "$(files_o
 else
   fail "a lower-case name is refused in any locale and nothing is copied" "status $status" "$out"
 fi
+rm -rf "$dir"
 
 # A list whose last line has no newline: the last name is synced like the others, never
 # skipped by a read that stops at the end of the file.
@@ -190,6 +194,7 @@ if [ "$status" -eq 0 ] && [ "$(files_of "$dir/repo/spec")" = "$expected" ]; then
 else
   fail "a list without a trailing newline syncs its last name too" "status $status" "$out" "$(files_of "$dir/repo/spec")"
 fi
+rm -rf "$dir"
 
 # A list that is not empty and yet names nothing, a single NUL byte, is a stop as an empty list
 # is, not a quiet "up to date".
@@ -202,6 +207,7 @@ if [ "$status" -eq 1 ] && grep -qF "spec/LIST names no spec" <<< "$out" && [ "$(
 else
   fail "a list that names nothing exits 1 and copies nothing" "status $status" "$out"
 fi
+rm -rf "$dir"
 
 # An empty list syncs nothing and says so rather than passing quietly.
 dir="$(scratch)"
@@ -213,6 +219,7 @@ if [ "$status" -eq 1 ] && grep -qiF "spec/LIST" <<< "$out"; then
 else
   fail "an empty spec/LIST exits 1" "status $status" "$out"
 fi
+rm -rf "$dir"
 
 # No list at all is a stop, never a fall back to every A-spec.
 dir="$(scratch)"
@@ -223,6 +230,7 @@ if [ "$status" -eq 1 ] && grep -qiF "spec/LIST" <<< "$out" && [ -z "$(files_of "
 else
   fail "a missing spec/LIST exits 1 and copies nothing" "status $status" "$out"
 fi
+rm -rf "$dir"
 
 # No governance folder is a stop.
 dir="$(scratch)"
@@ -234,6 +242,7 @@ if [ "$status" -eq 1 ] && grep -qiF "governance" <<< "$out"; then
 else
   fail "a missing governance folder exits 1" "status $status" "$out"
 fi
+rm -rf "$dir"
 
 # --- This repository's list is well formed -------------------------------------------------------
 #

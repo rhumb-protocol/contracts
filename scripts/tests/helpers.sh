@@ -63,9 +63,10 @@ assert_stops() {
   fi
 }
 
-# A stop that names what it read with the `::` taken out and prints no `::` at all: the runner
-# takes a line of the job's output that starts with `::`, after its leading spaces, as a workflow
-# command, so a gate never passes one on from what it read.
+# A stop that names what it read with the `::` and the `##[` taken out and prints neither: the
+# runner takes a line of the job's output that starts with `::`, after its leading spaces, as a
+# workflow command, and a `##[` anywhere in a line as one in its older form, so a gate never passes
+# one on from what it read.
 assert_stops_without_commands() {
   local what="$1" expected="$2"; shift 2
   local out status
@@ -76,6 +77,8 @@ assert_stops_without_commands() {
     fail "$what" "stopped, but does not name '$expected'" "$out"
   elif grep -qF -- "::" <<< "$out"; then
     fail "$what" "stopped, but passes a :: on" "$out"
+  elif grep -qF -- "##[" <<< "$out"; then
+    fail "$what" "stopped, but passes a ##[ on" "$out"
   else
     pass "$what"
   fi

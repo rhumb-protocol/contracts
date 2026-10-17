@@ -266,6 +266,40 @@ assert_stops_without_commands "a root named like a workflow command is named wit
   "$STRIPPED" "$CHECK" "$commanded/$COMMAND"
 rm -rf "$commanded"
 
+# The runner reads a `##[` anywhere in a line as a workflow command in its older form, so every
+# `##[` is taken out as well, at the start of a name and in the middle of one; and taking one out
+# never leaves another, or a `::`, where the pieces meet. Each tree is made here and removed by
+# its name.
+for case in "##[error]x|error]x" "foo ##[stop-commands]bar|foo stop-commands]bar" \
+  "re####[[formed|reformed" "co:##[:lon|colon" "re##::[formed|reformed"; do
+  dir="$(scratch)"
+  mkdir -p "$dir/.github/workflows"
+  workflow ok "$OK" > "$dir/.github/workflows/ok.yml"
+  printf '%s\n' "a note" > "$dir/.github/workflows/${case%%|*}"
+  assert_stops_without_commands "a file named ${case##*|} with a command marker is named without it" \
+    "  ${case##*|}" "$CHECK" "$dir"
+  rm -rf "$dir"
+done
+dir="$(scratch)"
+mkdir -p "$dir/.github/workflows"
+workflow probe "$KEPT" > "$dir/.github/workflows/##[error]x.yml"
+assert_stops_without_commands "a workflow named with a command marker is named without it" \
+  "error]x.yml" "$CHECK" "$dir"
+rm -rf "$dir"
+dir="$(scratch)"
+mkdir -p "$dir/.github/workflows"
+workflow ok "$OK" > "$dir/.github/workflows/ok.yml"
+workflow probe "$OK" > "$dir/.github/workflows/##["$'\r'"x.yml"
+assert_stops_without_commands "a name with a command marker before a carriage return is named without it" \
+  "line break" "$CHECK" "$dir"
+rm -rf "$dir"
+# A root that is not there is named by bash's own `cd` as well as by the check, and either names it
+# anywhere in its line. The path is one inside a tree made here, which is never made itself.
+dir="$(scratch)"
+assert_stops_without_commands "a missing root named with a command marker is named without it" \
+  "$dir/error]x" "$CHECK" "$dir/##[error]x"
+rm -rf "$dir"
+
 # A root given as a relative path is read as the same tree: the stop is the finding on its
 # workflow, not a parser that was handed an empty volume of that name.
 relative="$(scratch)"

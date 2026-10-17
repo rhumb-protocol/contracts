@@ -53,4 +53,18 @@ assert_stops_without_commands "a seed in a file named like a workflow command is
   "$STRIPPED:1:" "$dir/scripts/scan-secrets.sh"
 rm -rf "$dir"
 
+# The runner reads a `##[` anywhere in a line as a workflow command in its older form, so every
+# `##[` is taken out as well, at the start of a name and in the middle of a line.
+dir="$(scratch)"
+tree_of "$dir" "##[error]x.env" "a value"
+assert_stops_without_commands "an environment file named with a command marker is named without it" \
+  "error]x.env" "$dir/scripts/scan-secrets.sh"
+rm -rf "$dir"
+
+dir="$(scratch)"
+tree_of "$dir" notes.txt "foo ##[stop-commands]bar $SEED"
+assert_stops_without_commands "a seed on a line with a command marker in its middle is named without it" \
+  "notes.txt:1:foo stop-commands]bar" "$dir/scripts/scan-secrets.sh"
+rm -rf "$dir"
+
 report_counts
