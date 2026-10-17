@@ -56,12 +56,23 @@ trap 'rm -rf "$work"' EXIT
 
 # The workflows, by name, relative to the root: what both tools are given. Every entry of the
 # directory is looked at, those whose name starts with a dot included; what is not a `.yml` or
-# `.yaml` file is a stop.
+# `.yaml` file is a stop. A name that holds a line feed or a carriage return is a stop before any
+# other: the runner reads the job's output line by line, so such a name printed as it stands is
+# two lines, the second of the name's choosing. It is named on one line, as `printf %q` writes it.
+# The name is cut from the path, not taken through a command substitution, which would drop a
+# trailing line feed and name another file.
 files=()
 unread=()
+broken=()
 shopt -s nullglob dotglob
 for path in "$ROOT"/.github/workflows/*; do
-  name="$(basename "$path")"
+  name="${path##*/}"
+  case "$name" in
+    *$'\n'* | *$'\r'*)
+      broken+=("$name")
+      continue
+      ;;
+  esac
   case "$name" in
     *.yml | *.yaml)
       if [ -f "$path" ] && [ ! -L "$path" ]; then
@@ -74,6 +85,11 @@ for path in "$ROOT"/.github/workflows/*; do
   esac
 done
 shopt -u nullglob dotglob
+if [ "${#broken[@]}" -gt 0 ]; then
+  echo "in $ROOT/.github/workflows, a name that holds a line break (a line feed or a carriage return); rename it:" >&2
+  printf '  %q\n' "${broken[@]}" >&2
+  exit 1
+fi
 if [ "${#unread[@]}" -gt 0 ]; then
   echo "in $ROOT/.github/workflows, not a .yml or .yaml file this check reads; move or rename it:" >&2
   printf '  %s\n' "${unread[@]}" >&2
