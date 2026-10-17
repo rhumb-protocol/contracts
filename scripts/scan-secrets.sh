@@ -9,12 +9,13 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 
 # What the scan read and prints never forms a workflow command: the runner takes a line of the
-# job's output that starts with `::`, after its leading spaces, as one, and the scan prints the
-# names and the lines it found. So every `::` in them is taken out; taking out each pair leaves at
-# most one colon of every run, so no `::` is left. Bytes, not characters, so that a line that is
-# no valid text in the locale is still printed.
+# job's output that starts with `::`, after its leading spaces, as one, and a `##[` anywhere in a
+# line as one in its older form, and the scan prints the names and the lines it found. So every
+# `::` and `##[` in them is taken out, again until neither is left, since taking a marker out can
+# join its neighbours into another (`####[[`, `:##[:`). Bytes, not characters, so that a line that
+# is no valid text in the locale is still printed.
 unmarked() {
-  LC_ALL=C sed 's/:://g'
+  LC_ALL=C sed -e ':again' -e 's/##\[//g' -e 's/:://g' -e 't again'
 }
 
 status=0

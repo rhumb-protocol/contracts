@@ -37,13 +37,15 @@
 set -uo pipefail
 
 # What the check read and prints never forms a workflow command: the runner takes a line of the
-# job's output that starts with `::`, after its leading spaces, as one. So every line that carries
-# something read -- a name, a path, a value, a parser's message -- is printed through this filter
-# whole, the check's own words with it, so that no `::` forms where the two meet. Taking out each
-# pair leaves at most one colon of every run, so no `::` is left. Bytes, not characters: a name
-# that is no valid text in the locale is still filtered, never dropped by an error of sed.
+# job's output that starts with `::`, after its leading spaces, as one, and a `##[` anywhere in a
+# line as one in its older form. So every line that carries something read -- a name, a path, a
+# value, a parser's message -- is printed through this filter whole, the check's own words with
+# it, so that no marker forms where the two meet. Taking a marker out can join its neighbours into
+# another (`####[[`, `:##[:`), so both are taken out again until neither is left. Bytes, not
+# characters: a name that is no valid text in the locale is still filtered, never dropped by an
+# error of sed.
 unmarked() {
-  LC_ALL=C sed 's/:://g'
+  LC_ALL=C sed -e ':again' -e 's/##\[//g' -e 's/:://g' -e 't again'
 }
 
 # The root is made absolute: docker takes a relative path as the name of a volume, and would hand

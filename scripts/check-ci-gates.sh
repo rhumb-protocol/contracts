@@ -29,15 +29,17 @@
 set -uo pipefail
 
 # What the check read and prints never forms a workflow command: the runner takes a line of the
-# job's output that starts with `::`, after its leading spaces, as one, and a stop names values,
-# file names and lines of the files it read, while grep, awk and sed name the paths they fail on
-# in messages of their own. So the whole of the check's output and of every command it runs goes
-# through this filter, its own words with it, so that no `::` forms where the two meet; taking out
-# each pair leaves at most one colon of every run, so no `::` is left. Bytes, not characters, so
-# that a line that is no valid text in the locale is still printed. Whoever reads the output reads
-# it to its end, which comes when the filters have printed everything and closed it.
+# job's output that starts with `::`, after its leading spaces, as one, and a `##[` anywhere in a
+# line as one in its older form; a stop names values, file names and lines of the files it read,
+# while grep, awk and sed name the paths they fail on in messages of their own. So the whole of
+# the check's output and of every command it runs goes through this filter, its own words with
+# it, so that no marker forms where the two meet; taking a marker out can join its neighbours into
+# another (`####[[`, `:##[:`), so both are taken out again until neither is left. Bytes, not
+# characters, so that a line that is no valid text in the locale is still printed. Whoever reads
+# the output reads it to its end, which comes when the filters have printed everything and closed
+# it.
 unmarked() {
-  LC_ALL=C sed 's/:://g'
+  LC_ALL=C sed -e ':again' -e 's/##\[//g' -e 's/:://g' -e 't again'
 }
 exec > >(unmarked) 2> >(unmarked >&2)
 
