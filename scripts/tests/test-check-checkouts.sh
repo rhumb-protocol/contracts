@@ -293,6 +293,12 @@ workflow probe "$OK" > "$dir/.github/workflows/##["$'\r'"x.yml"
 assert_stops_without_commands "a name with a command marker before a carriage return is named without it" \
   "line break" "$CHECK" "$dir"
 rm -rf "$dir"
+# A root that is not there is named by bash's own `cd` as well as by the check, and either names it
+# anywhere in its line. The path is one inside a tree made here, which is never made itself.
+dir="$(scratch)"
+assert_stops_without_commands "a missing root named with a command marker is named without it" \
+  "$dir/error]x" "$CHECK" "$dir/##[error]x"
+rm -rf "$dir"
 
 # A root given as a relative path is read as the same tree: the stop is the finding on its
 # workflow, not a parser that was handed an empty volume of that name.
