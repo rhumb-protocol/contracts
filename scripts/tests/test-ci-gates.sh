@@ -471,6 +471,15 @@ assert_stops_without_commands "a last line written like a workflow command is na
 rm -rf "$dir"
 assert_stops_without_commands "an argument written like a workflow command is named without its double colons" \
   "set-output name=xy" bash "$check" "$REPO_DIR" "$command"
+# A tool the check runs over the tree names a path in its own messages, and a path can hold a line
+# feed: a directory whose name ends in .sh, read as a test file, makes grep, awk and sed say so on
+# the check's stderr.
+dir="$(scratch)"
+make_tree_with "$dir" 1 "report_counts" "report_counts"
+mkdir "$dir/scripts/tests/x"$'\n'"::warning title=t::injected.sh"
+assert_stops_without_commands "a tool's message on a path written like a workflow command is named without its double colons" \
+  "warning title=tinjected.sh" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- This repository ------------------------------------------------------------------------------
 # The assertion the cases above exist for.
