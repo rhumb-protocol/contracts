@@ -84,6 +84,7 @@ dir="$(scratch)"
 make_tree_with "$dir" 1 "report_counts" "report_counts"
 assert_ok "a workflow that raises its flag and test files that end on their verdict pass" \
   bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- A flag at "0" -------------------------------------------------------------------------------
 # The case the rule names: the condition is met in CI -- that is what CI is -- so a flag at "0" is
@@ -91,6 +92,7 @@ assert_ok "a workflow that raises its flag and test files that end on their verd
 dir="$(scratch)"
 make_tree_with "$dir" 0 "report_counts" "report_counts"
 assert_stops "a required flag at 0 fails the run" "$flag" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- A flag nobody sets ---------------------------------------------------------------------------
 # Worse than "0" and easier to do: the flag is read by a test, no step sets it, and the test
@@ -98,12 +100,14 @@ assert_stops "a required flag at 0 fails the run" "$flag" bash "$check" "$dir"
 dir="$(scratch)"
 make_tree_with "$dir" "" "report_counts" "report_counts"
 assert_stops "a flag no CI step sets fails the run" "$flag" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- A file CI runs directly that ends on an echo ---------------------------------------------
 dir="$(scratch)"
 make_tree_with "$dir" 1 "$counts" "report_counts"
 assert_stops "a file CI runs directly may not end on a command that always exits 0" \
   "test-direct.sh" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- A file CI runs directly is held to a list of endings, not a list of bad ones -----------------
 # A list of the commands that always exit 0 misses every way of writing one that it does not
@@ -120,6 +124,7 @@ for ending in 'report_counts || true' 'report_counts || :' 'report_counts; exit 
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not end on [$ending]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # shellcheck disable=SC2016
@@ -127,6 +132,7 @@ for ending in 'report_counts' 'exit "$status"' 'exit $status' '[ "$failed" -eq 0
   dir="$(scratch)"
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_ok "a file CI runs directly may end on [$ending]" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # --- The ending is the last command only when the file reaches it as one ---------------------------
@@ -146,6 +152,7 @@ for ending in "TRAP 'exit 0' EXIT"$'\n'"report_counts" "TRAP 'exit 0' 0"$'\n'"re
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach report_counts through [${ending%%$'\n'*}]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # The same three in the other spellings bash accepts: `trap --`, the signal name in lower case,
@@ -161,6 +168,7 @@ for ending in "TRAP -- 'exit 0' EXIT"$'\n'"report_counts" "TRAP 'exit 0' exit"$'
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach report_counts through [$(printf '%s' "$ending" | tr '\n' '/')]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # A trap that only cleans up keeps the status of the command before it, and is how the suite's
@@ -173,6 +181,7 @@ for ending in "TRAP 'rm -rf \"\$work\"' EXIT"$'\n'"report_counts" \
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_ok "a file CI runs directly may reach report_counts past [$(printf '%s' "$ending" | tr '\n' '/')]" \
     bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # The same again in the shapes a reading of lines can still see, each of which was run and ends
@@ -204,6 +213,7 @@ for ending in "true; TRAP 'exit 0' EXIT"$'\n'"report_counts" \
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach its ending through [$(printf '%s' "$ending" | tr '\n' '/')]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # The idiom those shapes must not take with them: a cleanup function named with its argument
@@ -213,6 +223,7 @@ dir="$(scratch)"
 make_tree_with "$dir" 1 $'cleanup() {\n  rm -rf "$1"\n}\nTRAP \'cleanup "$work"\' EXIT\nreport_counts' "report_counts"
 assert_ok "a file CI runs directly may reach report_counts past a cleanup named with an argument" \
   bash "$check" "$dir"
+rm -rf "$dir"
 
 # And the security reviewer's: a compound action whose second command is a function that exits
 # (the spelling test-install-service.sh uses, with a function that returns); a function written
@@ -227,6 +238,7 @@ for ending in $'done_() {\n  exit 0\n}\nTRAP \'rm -rf "$work"; done_\' EXIT\nrep
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach its ending through [$(printf '%s' "$ending" | head -n 3 | tr '\n' '/')]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # What stays allowed: the suite's own compound cleanup, a one-line cleanup with the word exit
@@ -240,6 +252,7 @@ for ending in $'remove_stand_in() {\n  rm -f "$work/x"\n  return 0\n}\nTRAP \'rm
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_ok "a file CI runs directly may reach report_counts past [$(printf '%s' "$ending" | head -n 3 | tr '\n' '/')]" \
     bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # A tab inside the body of a function a trap names, as an indent or before a comment: the body
@@ -252,11 +265,13 @@ for ending in $'cleanup() {\n\texit 0\n}\nTRAP cleanup EXIT\nreport_counts' \
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach its ending through [$(printf '%s' "$ending" | head -n 3 | tr '\n\t' '/>')]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 dir="$(scratch)"
 make_tree_with "$dir" 1 $'cleanup() {\n\trm -rf "$work"\n}\nTRAP cleanup EXIT\nreport_counts' "report_counts"
 assert_ok "a file CI runs directly may reach report_counts past a tab-indented cleanup that returns" \
   bash "$check" "$dir"
+rm -rf "$dir"
 
 # A definition of the function a trap names that the gate's reading of bodies does not take:
 # indented (inside an `if`), nested inside another function, with its `{` on the next line, or
@@ -276,6 +291,7 @@ for ending in $'if :; then\n  cleanup() {\n    exit 0\n  }\nfi\nTRAP cleanup EXI
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach its ending through [$(printf '%s' "$ending" | head -n 4 | tr '\n' '/')]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # A continuation whose line carries a `#` inside a string: the comment strip cuts the line at
@@ -286,11 +302,13 @@ dir="$(scratch)"
 make_tree_with "$dir" 1 'echo "a #b" ||'$'\n'"report_counts" "report_counts"
 assert_stops "a file CI runs directly may not reach report_counts through a continuation behind a # in a string" \
   "test-direct.sh" bash "$check" "$dir"
+rm -rf "$dir"
 dir="$(scratch)"
 make_tree_with "$dir" 1 "report_counts" "report_counts"
 printf '%s\n' "$trap_word 'exit 0' EXIT" > "$dir/scripts/tests/helpers.sh"
 assert_stops "the traps of helpers.sh are read like the traps of a test file" \
   "helpers.sh" bash "$check" "$dir"
+rm -rf "$dir"
 
 # Three readings of a function body that end it before its `exit`, each found in review and
 # each run: a definition line whose last `}` belongs to a `${...}` expansion or to a comment,
@@ -305,6 +323,7 @@ for ending in $'cleanup() { local d=${work}\n  exit 0\n}\nTRAP cleanup EXIT\nrep
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach its ending through [$(printf '%s' "$ending" | head -n 4 | tr '\n' '/')]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # What stays allowed beside them: a one-line cleanup that ends on a `${...}` and closes, and a
@@ -316,6 +335,7 @@ for ending in $'cleanup() { rm -rf "${work}"; }\nTRAP cleanup EXIT\necho "the wo
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_ok "a file CI runs directly may reach report_counts past [$(printf '%s' "$ending" | head -n 3 | tr '\n' '/')]" \
     bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # A trap in helpers.sh that names a function helpers.sh does not define: bash looks the name up
@@ -327,6 +347,7 @@ make_tree_with "$dir" 1 $'cleanup() {\n  exit 0\n}\nreport_counts' "report_count
 printf '%s\n' "$trap_word cleanup EXIT" > "$dir/scripts/tests/helpers.sh"
 assert_stops "a $trap_word of helpers.sh is followed into the functions of the test file that sources it" \
   "test-direct.sh" bash "$check" "$dir"
+rm -rf "$dir"
 
 # Three more readings that end a function body before bash does, queued from the review of the
 # reading above, each run and each ending the file on 0 with a failure behind it. A closing line
@@ -355,6 +376,7 @@ for ending in $'cleanup() {\n  {\n    :\n}\n  exit 0\n} 2>/dev/null\nTRAP cleanu
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_stops "a file CI runs directly may not reach its ending through [$(printf '%s' "$ending" | head -n 6 | tr '\n' '/')]" \
     "test-direct.sh" bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # What stays allowed beside them, read whole and no longer than bash reads it: a cleanup that
@@ -371,6 +393,7 @@ for ending in $'cleanup() {\n  rm -rf "$work"\n} 2>/dev/null\nTRAP cleanup EXIT\
   make_tree_with "$dir" 1 "$ending" "report_counts"
   assert_ok "a file CI runs directly may reach report_counts past [$(printf '%s' "$ending" | head -n 5 | tr '\n' '/')]" \
     bash "$check" "$dir"
+  rm -rf "$dir"
 done
 
 # The same holds for a file the runner walks, whose one allowed ending is report_counts alone.
@@ -378,6 +401,7 @@ dir="$(scratch)"
 make_tree_with "$dir" 1 "report_counts" 'report_counts || true'
 assert_stops "a file the runner walks may not end on [report_counts || true]" \
   "test-a-check.sh" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- A suite file that does not end on its counts ------------------------------------------------
 # The other half of the same rule: `run.sh` reads the counts off the last line, so a file that
@@ -386,6 +410,7 @@ dir="$(scratch)"
 make_tree_with "$dir" 1 "report_counts" 'exit 0'
 assert_stops "a file the runner walks must end on its counts" \
   "test-a-check.sh" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- A suite file that ends on a bare echo of its counts -----------------------------------------
 # run.sh reads the counts and is not fooled, but the same file run on its own exits 0 with any
@@ -396,6 +421,7 @@ dir="$(scratch)"
 make_tree_with "$dir" 1 "report_counts" "$counts"
 assert_stops "a file the runner walks may not end on a bare echo of its counts" \
   "test-a-check.sh" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- What the check reads, and nothing else ------------------------------------------------------
 # By default the check reads the one workflow, the crates and the tests of the public scripts,
@@ -426,6 +452,7 @@ assert_stops "a path named with --reads is searched for the flags its tests wait
   "ELSEWHERE_$required" bash "$check" "$other" --reads elsewhere
 assert_stops "a folder named with --tests is held to the endings" "test-b.sh" \
   bash "$check" "$other" --tests elsewhere/tests
+rm -rf "$other"
 
 # The crates are read by default: a contract test that waits for a flag no step of ci.yml sets
 # skips in CI as it skips on a laptop.
@@ -435,6 +462,7 @@ mkdir -p "$dir/crates/a/src"
 printf '// reads %s\n' "CRATE_$required" > "$dir/crates/a/src/lib.rs"
 assert_stops "a flag read in crates/ and set by no step of ci.yml fails the run" \
   "CRATE_$required" bash "$check" "$dir"
+rm -rf "$dir"
 
 # What a build leaves behind is not a test: a `target/` folder anywhere under a path the check
 # reads, and a binary file, carry every string the sources and their dependencies hold,
@@ -450,6 +478,7 @@ assert_ok "a flag-shaped string under a target/ folder or in a binary file is no
 printf '// reads %s\n' "SOURCE_$required" > "$dir/crates/a/src/lib.rs"
 assert_stops "and a flag a source file reads beside them is still found" \
   "SOURCE_$required" bash "$check" "$dir"
+rm -rf "$dir"
 
 # --- What the check read never forms a workflow command ------------------------------------------
 # The runner takes a line of the job's output that starts with `::` as a workflow command, so
