@@ -50,9 +50,10 @@ unmarked() {
 
 # The root is made absolute: docker takes a relative path as the name of a volume, and would hand
 # both parsers an empty one. `--` keeps a root that starts with a dash a path, and CDPATH is
-# cleared so that `cd` prints nothing of its own into the root.
-if ! ROOT="$(CDPATH='' cd -- "${1:-$(dirname "$0")/..}" > /dev/null && pwd)"; then
-  echo "no repository root at ${1:-$(dirname "$0")/..}" | unmarked >&2
+# cleared so that `cd` prints nothing of its own into the root. What `cd` says when it fails names
+# the root too, so it is caught and printed through the filter with the check's own words.
+if ! ROOT="$(CDPATH='' cd -- "${1:-$(dirname "$0")/..}" 2>&1 > /dev/null && pwd)"; then
+  { printf '%s\n' "$ROOT"; echo "no repository root at ${1:-$(dirname "$0")/..}"; } | unmarked >&2
   exit 1
 fi
 # Pinned by tag as well as by digest: a tag can be pushed again, a digest cannot.
