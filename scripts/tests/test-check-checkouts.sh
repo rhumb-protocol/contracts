@@ -241,6 +241,31 @@ for broken in $'probe\n.yml' $'probe.yml\n' $'probe\r.yml'; do
   fi
 done
 
+# What the check read and prints never forms a workflow command: the runner takes a line of the
+# job's output that starts with `::` as one, so every `::` in a name, a value or a path the check
+# names is taken out, and the stop names it without. Each tree is removed by its name.
+COMMAND="::set-output name=x::y"
+STRIPPED="set-output name=xy"
+tree_case "a file named like a workflow command is named without its double colons" 1 \
+  "$STRIPPED" "::" \
+  ok.yml "$(workflow ok "$OK")" "$COMMAND" "a note"
+tree_case "a workflow named like a workflow command is named without its double colons" 1 \
+  "$STRIPPED.yml" "::" \
+  "$COMMAND.yml" "$(workflow probe "$KEPT")"
+tree_case "a uses written like a workflow command is named without its double colons" 1 \
+  "$STRIPPED" "::" \
+  probe.yml "$(workflow probe "$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" \
+    "      - uses: \"$COMMAND\"")")"
+tree_case "a name with a line break before a workflow command is named without its double colons" 1 \
+  "$STRIPPED" "::" \
+  ok.yml "$(workflow ok "$OK")" "probe.yml"$'\n'"$COMMAND" "$(workflow probe "$OK")"
+commanded="$(scratch)"
+mkdir -p "$commanded/$COMMAND/.github/workflows"
+printf '%s\n' "a note" > "$commanded/$COMMAND/.github/workflows/notes.txt"
+assert_stops_without_commands "a root named like a workflow command is named without its double colons" \
+  "$STRIPPED" "$CHECK" "$commanded/$COMMAND"
+rm -rf "$commanded"
+
 # A root given as a relative path is read as the same tree: the stop is the finding on its
 # workflow, not a parser that was handed an empty volume of that name.
 relative="$(scratch)"

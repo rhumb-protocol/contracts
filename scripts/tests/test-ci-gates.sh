@@ -451,6 +451,27 @@ printf '// reads %s\n' "SOURCE_$required" > "$dir/crates/a/src/lib.rs"
 assert_stops "and a flag a source file reads beside them is still found" \
   "SOURCE_$required" bash "$check" "$dir"
 
+# --- What the check read never forms a workflow command ------------------------------------------
+# The runner takes a line of the job's output that starts with `::` as a workflow command, so
+# every `::` in a value, a name or a line the check read and names is taken out, and the stop
+# names it without. Each tree is made here and removed by its name.
+command="::set-output name=x::y"
+dir="$(scratch)"
+make_tree_with "$dir" "$command" "report_counts" "report_counts"
+assert_stops_without_commands "a flag set like a workflow command is named without its double colons" \
+  "set-outputname=xy" bash "$check" "$dir"
+rm -rf "$dir"
+dir="$(scratch)"
+make_tree_with "$dir" 1 "report_counts" "report_counts"
+printf '#!/usr/bin/env bash\necho %s\n' "$command" > "$dir/scripts/tests/test-$command.sh"
+assert_stops_without_commands "a test file named like a workflow command is named without its double colons" \
+  "test-set-output name=xy.sh" bash "$check" "$dir"
+assert_stops_without_commands "a last line written like a workflow command is named without its double colons" \
+  "[echo set-output name=xy]" bash "$check" "$dir"
+rm -rf "$dir"
+assert_stops_without_commands "an argument written like a workflow command is named without its double colons" \
+  "set-output name=xy" bash "$check" "$REPO_DIR" "$command"
+
 # --- This repository ------------------------------------------------------------------------------
 # The assertion the cases above exist for.
 assert_ok "this repository's own CI cannot pass by skipping" bash "$check" "$REPO_DIR"
