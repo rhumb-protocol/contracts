@@ -63,6 +63,24 @@ assert_stops() {
   fi
 }
 
+# A stop that names what it read with the `::` taken out and prints no `::` at all: the runner
+# takes a line of the job's output that starts with `::`, after its leading spaces, as a workflow
+# command, so a gate never passes one on from what it read.
+assert_stops_without_commands() {
+  local what="$1" expected="$2"; shift 2
+  local out status
+  out="$("$@" 2>&1)"; status=$?
+  if [ "$status" -eq 0 ]; then
+    fail "$what" "expected a stop, the command succeeded" "$out"
+  elif [ -z "$out" ] || ! grep -qF -- "$expected" <<< "$out"; then
+    fail "$what" "stopped, but does not name '$expected'" "$out"
+  elif grep -qF -- "::" <<< "$out"; then
+    fail "$what" "stopped, but passes a :: on" "$out"
+  else
+    pass "$what"
+  fi
+}
+
 # A throwaway directory for the trees a test builds.
 scratch() {
   mktemp -d "${TMPDIR:-/tmp}/rhumb-script-test.XXXXXX"

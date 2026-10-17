@@ -8,6 +8,15 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 
+# What the scan read and prints never forms a workflow command: the runner takes a line of the
+# job's output that starts with `::`, after its leading spaces, as one, and the scan prints the
+# names and the lines it found. So every `::` in them is taken out; taking out each pair leaves at
+# most one colon of every run, so no `::` is left. Bytes, not characters, so that a line that is
+# no valid text in the locale is still printed.
+unmarked() {
+  LC_ALL=C sed 's/:://g'
+}
+
 status=0
 out="$(mktemp)"
 trap 'rm -f "$out"' EXIT
@@ -24,13 +33,13 @@ set -e
 case "$rc" in
   0)
     echo "a string shaped like a Stellar secret key is tracked:"
-    cat "$out"
+    unmarked < "$out"
     status=1
     ;;
   1) ;;   # no match
   *)
     echo "the scan could not search the tree (git grep exit $rc):"
-    cat "$out"
+    unmarked < "$out"
     status=1
     ;;
 esac
@@ -41,7 +50,7 @@ rc=$?
 set -e
 if [ "$rc" -ne 0 ]; then
   echo "the scan could not list the tracked files (git ls-files exit $rc):"
-  cat "$out"
+  unmarked < "$out"
   status=1
 else
   # Any name that starts with .env (.env, .env.local, .envrc) or ends in .env (local.env),
@@ -49,7 +58,7 @@ else
   envs="$(grep -i -E '(^|/)\.env|\.env$' "$out" || true)"
   if [ -n "$envs" ]; then
     echo "an environment file is tracked:"
-    echo "$envs"
+    unmarked <<< "$envs"
     status=1
   fi
 fi

@@ -216,6 +216,56 @@ workflow ok "$OK" > "$nested/.github/workflows/ok.yml"
 workflow probe "$KEPT" > "$nested/.github/workflows/more/probe.yml"
 judge "a directory beside the workflows is a stop" 1 "$nested" "more"
 
+# A name that holds a line break is a stop of its own that says so and names the file on one
+# line: the runner reads the job's output line by line, so a name printed as it stands is two
+# lines, the second of the name's choosing, and a command substitution drops a trailing line feed
+# and names another file. A carriage return ends a line for the runner as well. Each tree is made
+# here and removed by its name.
+for broken in $'probe\n.yml' $'probe.yml\n' $'probe\r.yml'; do
+  quoted="$(printf '%q' "$broken")"
+  dir="$(scratch)"
+  mkdir -p "$dir/.github/workflows"
+  workflow ok "$OK" > "$dir/.github/workflows/ok.yml"
+  workflow probe "$OK" > "$dir/.github/workflows/$broken"
+  output="$("$CHECK" "$dir" 2>&1)"
+  rc=$?
+  rm -rf "$dir"
+  if [ "$rc" -eq 0 ]; then
+    fail "a workflow named $quoted is a stop" "exit 0, expected a stop" "$output"
+  elif ! grep -qF -- "line break" <<< "$output"; then
+    fail "a workflow named $quoted is a stop" "the output does not say line break" "$output"
+  elif ! grep -qxF -- "  $quoted" <<< "$output"; then
+    fail "a workflow named $quoted is a stop" "the output does not name it on one line" "$output"
+  else
+    pass "a workflow named $quoted is a stop"
+  fi
+done
+
+# What the check read and prints never forms a workflow command: the runner takes a line of the
+# job's output that starts with `::` as one, so every `::` in a name, a value or a path the check
+# names is taken out, and the stop names it without. Each tree is removed by its name.
+COMMAND="::set-output name=x::y"
+STRIPPED="set-output name=xy"
+tree_case "a file named like a workflow command is named without its double colons" 1 \
+  "$STRIPPED" "::" \
+  ok.yml "$(workflow ok "$OK")" "$COMMAND" "a note"
+tree_case "a workflow named like a workflow command is named without its double colons" 1 \
+  "$STRIPPED.yml" "::" \
+  "$COMMAND.yml" "$(workflow probe "$KEPT")"
+tree_case "a uses written like a workflow command is named without its double colons" 1 \
+  "$STRIPPED" "::" \
+  probe.yml "$(workflow probe "$(printf '%s\n' "    runs-on: ubuntu-24.04" "    steps:" \
+    "      - uses: \"$COMMAND\"")")"
+tree_case "a name with a line break before a workflow command is named without its double colons" 1 \
+  "$STRIPPED" "::" \
+  ok.yml "$(workflow ok "$OK")" "probe.yml"$'\n'"$COMMAND" "$(workflow probe "$OK")"
+commanded="$(scratch)"
+mkdir -p "$commanded/$COMMAND/.github/workflows"
+printf '%s\n' "a note" > "$commanded/$COMMAND/.github/workflows/notes.txt"
+assert_stops_without_commands "a root named like a workflow command is named without its double colons" \
+  "$STRIPPED" "$CHECK" "$commanded/$COMMAND"
+rm -rf "$commanded"
+
 # A root given as a relative path is read as the same tree: the stop is the finding on its
 # workflow, not a parser that was handed an empty volume of that name.
 relative="$(scratch)"
