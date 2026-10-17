@@ -36,11 +36,21 @@
 # Usage: scripts/check-checkouts.sh [repository root]   (a test may pass a tree of its own)
 set -uo pipefail
 
+# What the check read and prints never forms a workflow command: the runner takes a line of the
+# job's output that starts with `::`, after its leading spaces, as one. So every line that carries
+# something read -- a name, a path, a value, a parser's message -- is printed through this filter
+# whole, the check's own words with it, so that no `::` forms where the two meet. Taking out each
+# pair leaves at most one colon of every run, so no `::` is left. Bytes, not characters: a name
+# that is no valid text in the locale is still filtered, never dropped by an error of sed.
+unmarked() {
+  LC_ALL=C sed 's/:://g'
+}
+
 # The root is made absolute: docker takes a relative path as the name of a volume, and would hand
 # both parsers an empty one. `--` keeps a root that starts with a dash a path, and CDPATH is
 # cleared so that `cd` prints nothing of its own into the root.
 if ! ROOT="$(CDPATH='' cd -- "${1:-$(dirname "$0")/..}" > /dev/null && pwd)"; then
-  echo "no repository root at ${1:-$(dirname "$0")/..}" >&2
+  echo "no repository root at ${1:-$(dirname "$0")/..}" | unmarked >&2
   exit 1
 fi
 # Pinned by tag as well as by digest: a tag can be pushed again, a digest cannot.
@@ -86,17 +96,21 @@ for path in "$ROOT"/.github/workflows/*; do
 done
 shopt -u nullglob dotglob
 if [ "${#broken[@]}" -gt 0 ]; then
-  echo "in $ROOT/.github/workflows, a name that holds a line break (a line feed or a carriage return); rename it:" >&2
-  printf '  %q\n' "${broken[@]}" >&2
+  {
+    echo "in $ROOT/.github/workflows, a name that holds a line break (a line feed or a carriage return); rename it:"
+    printf '  %q\n' "${broken[@]}"
+  } | unmarked >&2
   exit 1
 fi
 if [ "${#unread[@]}" -gt 0 ]; then
-  echo "in $ROOT/.github/workflows, not a .yml or .yaml file this check reads; move or rename it:" >&2
-  printf '  %s\n' "${unread[@]}" >&2
+  {
+    echo "in $ROOT/.github/workflows, not a .yml or .yaml file this check reads; move or rename it:"
+    printf '  %s\n' "${unread[@]}"
+  } | unmarked >&2
   exit 1
 fi
 if [ "${#files[@]}" -eq 0 ]; then
-  echo "no workflow named .yml or .yaml under $ROOT/.github/workflows; a check of nothing is no check" >&2
+  echo "no workflow named .yml or .yaml under $ROOT/.github/workflows; a check of nothing is no check" | unmarked >&2
   exit 1
 fi
 
@@ -137,13 +151,14 @@ cat > "$work/uses.yq" <<'EXPRESSION'
 EXPRESSION
 if ! docker run --rm --user "$RUNAS" -v "$ROOT:/mnt:ro" -v "$work:/expression:ro" -w /mnt "$YQ" eval-all \
   --from-file /expression/uses.yq -o=json -I=0 "${files[@]}" > "$work/uses.json" 2> "$work/uses.log"; then
-  echo "yq could not read the uses of the workflows:" >&2
-  cat "$work/uses.log" >&2
+  { echo "yq could not read the uses of the workflows:"; cat "$work/uses.log"; } | unmarked >&2
   exit 1
 fi
 if [ -s "$work/uses.json" ]; then
-  echo "a uses that is not canonical (owner/repo[/path]@<40 hex> or docker://...), or a key in another case:" >&2
-  cat "$work/uses.json" >&2
+  {
+    echo "a uses that is not canonical (owner/repo[/path]@<40 hex> or docker://...), or a key in another case:"
+    cat "$work/uses.json"
+  } | unmarked >&2
   exit 1
 fi
 
@@ -158,33 +173,33 @@ rc=$?
 case "$rc" in
   0 | 1[0-4]) ;;
   *)
-    echo "zizmor did not audit the workflows (exit $rc):" >&2
-    cat "$work/log.txt" >&2
+    { echo "zizmor did not audit the workflows (exit $rc):"; cat "$work/log.txt"; } | unmarked >&2
     exit 1
     ;;
 esac
 if ! grep -q '^\[' "$work/findings.json"; then
-  echo "zizmor answered no list of findings:" >&2
-  cat "$work/findings.json" "$work/log.txt" >&2
+  { echo "zizmor answered no list of findings:"; cat "$work/findings.json" "$work/log.txt"; } | unmarked >&2
   exit 1
 fi
 
 if ! kept="$(docker run --rm --user "$RUNAS" -i "$YQ" -p=json \
-  '[.[] | select(.ident == "artipacked")] | length' < "$work/findings.json")"; then
-  echo "yq could not read zizmor's findings" >&2
+  '[.[] | select(.ident == "artipacked")] | length' < "$work/findings.json" 2> "$work/count.log")"; then
+  { echo "yq could not read zizmor's findings:"; cat "$work/count.log"; } | unmarked >&2
   exit 1
 fi
 case "$kept" in
   '' | *[!0-9]*)
-    echo "yq gave no count of zizmor's findings, but [$kept]" >&2
+    echo "yq gave no count of zizmor's findings, but [$kept]" | unmarked >&2
     exit 1
     ;;
 esac
 if [ "$kept" -gt 0 ]; then
-  echo "$kept checkout(s) keep their credentials; give each step persist-credentials: false in its with:" >&2
-  docker run --rm --user "$RUNAS" -i "$YQ" -p=json \
-    '[.[] | select(.ident == "artipacked") | .locations[].symbolic.key.Local.verbatim_path] | unique | .[]' \
-    < "$work/findings.json" >&2
+  {
+    echo "$kept checkout(s) keep their credentials; give each step persist-credentials: false in its with:"
+    docker run --rm --user "$RUNAS" -i "$YQ" -p=json \
+      '[.[] | select(.ident == "artipacked") | .locations[].symbolic.key.Local.verbatim_path] | unique | .[]' \
+      < "$work/findings.json" 2>&1
+  } | unmarked >&2
 else
   echo "every checkout of the workflows leaves no credential behind"
 fi

@@ -28,6 +28,16 @@
 #                                  [--tests <dir>]   (the tests pass a tree of their own)
 set -uo pipefail
 
+# What the check read and prints never forms a workflow command: the runner takes a line of the
+# job's output that starts with `::`, after its leading spaces, as one, and a stop names values,
+# file names and lines of the files it read. So every message is printed through this filter
+# whole, the check's own words with it, so that no `::` forms where the two meet; taking out each
+# pair leaves at most one colon of every run, so no `::` is left. Bytes, not characters, so that a
+# line that is no valid text in the locale is still printed.
+unmarked() {
+  LC_ALL=C sed 's/:://g'
+}
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [ "$#" -gt 0 ] && [ "${1#--}" = "$1" ]; then
   ROOT="$1"
@@ -40,7 +50,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --workflow|--reads|--tests)
       if [ "$#" -lt 2 ] || [ -z "$2" ]; then
-        echo "$1 needs a path relative to the repository root" >&2
+        echo "$1 needs a path relative to the repository root" | unmarked >&2
         exit 2
       fi
       case "$1" in
@@ -51,7 +61,7 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     *)
-      echo "unknown argument: $1" >&2
+      echo "unknown argument: $1" | unmarked >&2
       exit 2
       ;;
   esac
@@ -62,7 +72,7 @@ fi
 status=0
 
 stop() {
-  echo "$1" >&2
+  unmarked <<< "$1" >&2
   status=1
 }
 
