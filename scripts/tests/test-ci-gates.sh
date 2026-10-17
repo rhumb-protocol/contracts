@@ -481,6 +481,27 @@ assert_stops_without_commands "a tool's message on a path written like a workflo
   "warning title=tinjected.sh" bash "$check" "$dir"
 rm -rf "$dir"
 
+# The runner reads a `##[` anywhere in a line as a workflow command in its older form, so every
+# `##[` is taken out as well: at the start of an argument, in the middle of a name and of a line,
+# and in a name that holds a carriage return. (A flag's value is read up to its first `#`, so no
+# `##[` reaches the check that way.)
+assert_stops_without_commands "an argument with a command marker is named without it" \
+  "unknown argument: error]x" bash "$check" "$REPO_DIR" "##[error]x"
+dir="$(scratch)"
+make_tree_with "$dir" 1 "report_counts" "report_counts"
+printf '#!/usr/bin/env bash\necho %s\n' "##[error]x" > "$dir/scripts/tests/test-foo ##[stop-commands]bar.sh"
+assert_stops_without_commands "a test file named with a command marker in its middle is named without it" \
+  "test-foo stop-commands]bar.sh" bash "$check" "$dir"
+assert_stops_without_commands "a last line with a command marker is named without it" \
+  "[echo error]x]" bash "$check" "$dir"
+rm -rf "$dir"
+dir="$(scratch)"
+make_tree_with "$dir" 1 "report_counts" "report_counts"
+printf '#!/usr/bin/env bash\necho x\n' > "$dir/scripts/tests/test-##["$'\r'"x.sh"
+assert_stops_without_commands "a test file named with a command marker before a carriage return is named without it" \
+  "x.sh" bash "$check" "$dir"
+rm -rf "$dir"
+
 # --- This repository ------------------------------------------------------------------------------
 # The assertion the cases above exist for.
 assert_ok "this repository's own CI cannot pass by skipping" bash "$check" "$REPO_DIR"
