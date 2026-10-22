@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The public files name only the specs of the public list, the ones a reader of this repository
-# has: A-001, A-007, E-003 and E-007. No ADR and no other spec is named: a rule an ADR set is
-# stated in the comment itself, and a fact another spec holds is stated as a fact, so that
+# has: A-001, A-007, A-008, E-003 and E-007. No ADR and no other spec is named: a rule an ADR set
+# is stated in the comment itself, and a fact another spec holds is stated as a fact, so that
 # nothing points at a page the reader cannot open. The crates first, then every public file.
 set -uo pipefail
 
@@ -21,9 +21,9 @@ else
 fi
 
 # Any other spec name off the public list: every `X-nnn` of the A, E and I series that is not
-# one of the four, at the start of a line or after a character that cannot be part of a name.
+# one of the five, at the start of a line or after a character that cannot be part of a name.
 others="$(LC_ALL=C grep -rnoE '(^|[^A-Za-z0-9])[AEI]-[0-9]{3}[a-z]?' "$CRATES" \
-  | LC_ALL=C grep -vE '[^0-9a-z](A-001|A-007|E-003|E-007)$')"
+  | LC_ALL=C grep -vE '[^0-9a-z](A-001|A-007|A-008|E-003|E-007)$')"
 if [ -z "$others" ]; then
   pass "the crates name no spec off the public list"
 else
@@ -48,7 +48,7 @@ for path in "${public[@]}"; do
   fi
 done
 found="$(LC_ALL=C grep -rnoE '(^|[^A-Za-z0-9])[AEI]-[0-9]{3}[a-z]?' "${public[@]}" \
-  | LC_ALL=C grep -vE '[^0-9a-z](A-001|A-007|E-003|E-007)$')"
+  | LC_ALL=C grep -vE '[^0-9a-z](A-001|A-007|A-008|E-003|E-007)$')"
 # The paths relative to the root, so that the exception is anchored there and no other file of
 # that name passes.
 found="${found//"$REPO_DIR"\//}"
