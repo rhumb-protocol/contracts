@@ -37,7 +37,8 @@ fi
 series="E-0""00"
 public=("$REPO_DIR/crates" "$REPO_DIR/README.md" "$REPO_DIR/tests/fixtures/README.md"
         "$REPO_DIR/Cargo.toml" "$REPO_DIR/Cargo.lock" "$REPO_DIR/rust-toolchain.toml"
-        "$REPO_DIR/.gitignore" "$REPO_DIR/LICENSE" "$REPO_DIR/.github/workflows/ci.yml"
+        "$REPO_DIR/.gitignore" "$REPO_DIR/LICENSE" "$REPO_DIR/SECURITY.md"
+        "$REPO_DIR/.github/workflows/ci.yml"
         "$REPO_DIR/scripts/sync-specs.sh" "$REPO_DIR/scripts/scan-secrets.sh"
         "$REPO_DIR/scripts/check-ci-gates.sh" "$REPO_DIR/scripts/tests")
 for path in "${public[@]}"; do
