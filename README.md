@@ -34,6 +34,7 @@ through `scripts/sync-specs.sh`, which copies the files `spec/LIST` names; a cha
 specification is made in governance and synced, never written in this repository.
 - A-001 — the rate adapters.
 - A-007 — the aggregator adapter, when it is built.
+- A-008 — the bug bounty.
 - E-003 — the rate provider interface the adapters implement.
 - E-007 — the pool contract, whose ABI the crates encode.
 

@@ -41,7 +41,17 @@ delay and the guardian's veto, by the pattern of E-007 §3.2, in the adapters' n
 (A-010 step 3, ADR-015 §4): this spec is copied into the public `contracts` repository, so
 its text names no folder of the brain and no private component by name; the references to
 the brain's research and plans and to the indexer's alerting unit are rewritten as what
-they say (the values stand in §7), nothing in the rules changed
+they say (the values stand in §7), nothing in the rules changed; amended 2026-10-16, from
+the testnet outage of 2026-10-15 and 16 (pool USDY/USDC `rate-stale` after a `post` that
+succeeded and a `refresh` that did not): a refresh-pending state per pool after a successful
+`post`, retried every cycle until a `refresh` of that pool succeeds, the rule "refresh only
+after a post" kept for a pool without a pending refresh (§3.4); one keeper pull request by
+ops, tests first, together with the `extend-ttl` ceiling of A-002 §3.10 of the same day;
+amended 2026-10-16 (A-003 §7.2): the testnet Soroban list has two entries, Validation Cloud
+testnet as `secret` first while the SDF endpoint falters and the SDF endpoint second, the
+keeper's testnet configuration following that order (§3.4; ops pull request 77); amended
+2026-10-20 (ADR-014 accepted, `26b3504`): §7.4 carries the mainnet `RateConfig` and
+`PoolConfig` values the ADR fixed
 Target: `rhumb-protocol/contracts`, crates `adapter-redstone` and `adapter-issuer` (Soroban
 contracts), the host program `keeper/`, and the first entries of `chain-config/`.
 Depends on: A-000 (the repository, done), ADR-007 (the sources, the configurations, the rules
@@ -240,8 +250,17 @@ session with a real key.
   that fell to the second endpoint is one journal line of its own (`endpoint 2:
   <chain> <reader> <reason>`), so that `morning.sh` can count the first endpoint's failures
   per day (A-004 §4.10). The mainnet lists are Validation Cloud beside
-  `mainnet.sorobanrpc.com` and Alchemy beside the public Ethereum endpoint (§7.9); on testnet
-  the lists hold one entry each until a second testnet endpoint is wanted. The
+  `mainnet.sorobanrpc.com` and Alchemy beside the public Ethereum endpoint (§7.9). On
+  testnet (amended 2026-10-16, A-003 §7.2; until that day the testnet lists held one entry
+  each) the Soroban list has two entries since 2026-10-16: `["secret",
+  "https://soroban-testnet.stellar.org"]`, `secret` the Validation Cloud testnet endpoint
+  of the owner's account, its keyed URL the `soroban_rpc_secret` line of the testnet
+  keeper's secret file (A-004 §4.5), first in the list while the SDF endpoint falters (the
+  outage of 2026-10-15 and 16), the public SDF endpoint second; the failover rule above
+  holds unchanged, so a testnet reading asks Validation Cloud first and the SDF endpoint
+  on its failure, and the order is swapped back by a configuration change alone.
+  `keeper/config/testnet.toml` follows that order (ops pull request 77). The Ethereum
+  list on testnet is unchanged. The
   testnet config names only the assets that have a testnet pool; the measurement of ADR-007
   point 2 for deJTRSY runs in observe-only mode against mainnet, where the token and both
   sources are, so `keeper/config/testnet.toml` does not name it (2026-09-16). The
@@ -424,6 +443,30 @@ session with a real key.
   unchanged price under the time of a new read, at most every so many hours). Testnet
   answers it: USDY compounds per calendar day (§7.3), so under this rule it posts about once
   a day, and the log shows whether a day is ever skipped. No heartbeat is built before then.
+- Amended 2026-10-16, from the testnet outage of 2026-10-15 and 16 (endpoint 1 of the RPC
+  timing out almost continuously from about 19:00 UTC; the keeper's `post` for USDY
+  succeeded, the `refresh` of USDY/USDC that followed it did not, and because the next
+  readings were no news nothing called the pool again, so it stood `rate-stale` with a fresh
+  value in its adapter): **a post is not finished until its refresh is.** After a successful
+  `post` the keeper records, in the state file, a pending refresh for every pool of that
+  asset, and clears it for a pool only when a `refresh` of that pool has succeeded. Every
+  following cycle tries the `refresh` of each pool with a pending refresh again, also when
+  the cycle's reading is no news and posts nothing; a failed `refresh` is logged and retried
+  at the next cycle like any failed transaction, and a submission still has no failover
+  (point 1 above), so the retry waits for the cycle. The rule above, "`refresh` follows a
+  post and nothing else", stays for a pool without a pending refresh: a quiet cycle in which
+  nothing is pending still calls no pool and costs no fee. The pending refresh lives in the
+  state file, so it survives a restart of the service. Tests first, in the keeper pull
+  request ops opens for it, with the `extend-ttl` ceiling of A-002 §3.10 of the same day: a
+  `post` that succeeded with a `refresh` that failed leaves the pool pending; the next cycle
+  with a reading that is no news submits `refresh` for that pool and no `post` (the recorded
+  transport sees one `sendTransaction`); a `refresh` that succeeds clears the pending state
+  and one that fails keeps it; a pool without a pending refresh is not called in a quiet
+  cycle, as before; the pending state is read back from the state file after a restart.
+  Decided 2026-10-16 (ops pull request 79): when the state file cannot be written, the run
+  stops after the first asset and posts nothing more; it does not carry on, because a run
+  that carried on would post without recording, and a post the state file does not hold
+  leaves its refresh pending nowhere.
 - Observe-only mode (`--observe-only`): the same readers, plus a read-only simulation of
   `lastprice` on RedStone's SEP-40 contract for the same asset, logged side by side with the
   difference in basis points and both timestamps, and nothing signed. It takes `--asset
@@ -777,6 +820,16 @@ Reference `PoolConfig` for test 4 and for the testnet pools of A-002 (the deploy
 mainnet values): band pools `width 10`, `fee 5`, `bump_per_day 5`, `bump_max 5` (a second,
 wide pool `width 20`, `fee 10` where wanted); stable pools `amp 200`, `fee 1` and `fee 5`;
 cap `10^22` (10 000 tokens) per pool at the start of the beta.
+
+Amended 2026-10-20 (ADR-014 §1 to §3, accepted that day, `26b3504`): the mainnet values
+are fixed. USDY and USTRY take the columns of the table above as they stand (`max_age
+108000`, `max_closed_age 108000`, `grace 7200`, `max_step 10`, drift `0 ..= 5` with
+`max_jump 5`, `hours None`, `sources 2`, `cross_check Some(5)`), and the observe week
+proposed no narrower band (ADR-014 §3 point 9). `PoolConfig` of both band pools is `width
+10`, `fee 5`, `bump_per_day 5`, `bump_max 5`, with no wide second pool; the stable pool
+PYUSD/USDC is `amp 200`, `fee 5`, with no `fee 1` pool in the beta; the cap is `10^22` per
+pool. The reference values above stay the reference for test 4 and the testnet pools; the
+deJTRSY and CETES columns wait for their own ADRs.
 
 ### 7.5 Reflector: the question and the reading
 

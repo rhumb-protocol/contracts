@@ -43,7 +43,8 @@ watchtower is still named, as the operator of the public `sentinel` role (A-010 
 stated 2026-10-12 as built, from a question of I-003 rule 17, no change in the code: a
 `withdraw` during the delay of a write-down announcement carries the scaled payout in its
 event with `Scaled { reserve, balance }`, while the reserve falls by the unscaled one (§3.2,
-§3.5, test 12)
+§3.5, test 12); amended 2026-10-20 (ADR-014 accepted, `26b3504`): §3.4 `MAX_PROTOCOL_SHARE`
+confirmed at `2 500` as compiled
 Target: core, crate `pool-soroban` (seventh component in the build order of ADR-002; the
 chain-specific crate that E-000 rule 2 allows, named for its chain)
 Depends on: E-004 (`band`), E-005 (`stable-pool`), E-003 (`rate`), E-001 (`math`), all as merged in
@@ -453,7 +454,11 @@ call by call below; `set_protocol_share` and `collect_protocol_fees` stay immedi
   `MAX_PROTOCOL_SHARE`, a constant of the Wasm. The value of the constant is fixed by the ADR that
   turns the switch on for the first time, before the mainnet beta; this spec proposes `2 500`
   (a quarter of the fee), and the testnet builds carry that number until the ADR confirms or
-  changes it.
+  changes it. Confirmed 2026-10-20 (ADR-014 §2 point 5, accepted that day, `26b3504`):
+  `MAX_PROTOCOL_SHARE` is `2 500` as compiled into the version 8 artefact. The deploy ADR
+  fixes the constant because it binds the bytes that hold it; the ADR that turns the switch
+  on sets the share under it, and the share is `0` at creation (ADR-014 §2 point 4). Both
+  readings of "the ADR" above are right about their part.
 - On every swap the engine returns a state with the whole fee inside the reserve of the token
   in; the contract takes `protocol = floor(fee · ProtocolShare / 10 000)` (E-001 `fee_floor`,
   rounding for the LPs) out of that reserve and adds it to `ProtocolOwed` of that token before
