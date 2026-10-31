@@ -51,7 +51,13 @@ amended 2026-10-16 (A-003 §7.2): the testnet Soroban list has two entries, Vali
 testnet as `secret` first while the SDF endpoint falters and the SDF endpoint second, the
 keeper's testnet configuration following that order (§3.4; ops pull request 77); amended
 2026-10-20 (ADR-014 accepted, `26b3504`): §7.4 carries the mainnet `RateConfig` and
-`PoolConfig` values the ADR fixed
+`PoolConfig` values the ADR fixed; amended 2026-10-26: USDT0's token is its Stellar Asset
+Contract, the OFT id of §7.1 is the LayerZero bridge, no token, and stands in no `[tokens]`
+entry (§3.5, §7.1), after `record-decimals.sh mainnet` stopped on it that day (A-002 §3.11);
+amended 2026-10-29 (the exploit reviewer's finding on ops pull request 100, confirmed in the
+mainnet journal): the keeper reads the RedStone feed for the refresh decision through the
+SEP-40 contract of `[sources]`, never through the adapter (§3.4); one keeper pull request in
+`ops` with the A-004 §9 point 4 amendment of the same day, both reviewers, tests first
 Target: `rhumb-protocol/contracts`, crates `adapter-redstone` and `adapter-issuer` (Soroban
 contracts), the host program `keeper/`, and the first entries of `chain-config/`.
 Depends on: A-000 (the repository, done), ADR-007 (the sources, the configurations, the rules
@@ -443,6 +449,12 @@ session with a real key.
   unchanged price under the time of a new read, at most every so many hours). Testnet
   answers it: USDY compounds per calendar day (§7.3), so under this rule it posts about once
   a day, and the log shows whether a day is ever skipped. No heartbeat is built before then.
+  Amended 2026-10-29, from the finding of the exploit reviewer on ops pull request 100 (the
+  mainnet keeper called `decimals()` and `lastprice()` on the pool's RedStone adapter, which
+  has neither, so every cycle ended on "the RedStone side could not be read" and the refresh
+  on a feed movement never happened): the keeper reads the RedStone feed for the refresh
+  decision through the SEP-40 contract of `[sources]` (`redstone_sep40`, as the observe-only
+  mode does), never through the adapter.
 - Amended 2026-10-16, from the testnet outage of 2026-10-15 and 16 (endpoint 1 of the RPC
   timing out almost continuously from about 19:00 UTC; the keeper's `post` for USDY
   succeeded, the `refresh` of USDY/USDC that followed it did not, and because the next
@@ -534,7 +546,9 @@ testnet; `adapters`, `pools` and `router` are written by A-002 after each deploy
   Soroban token's id from the issuer's own publication) and the date. The Centrifuge ids are the
   Soroban contracts of §7.1, never the classic look-alikes. Etherfuse's ids are taken from
   `GET /lookup/stablebonds` and the entry records the response's date (ADR-007 point 8, as
-  amended 2026-09-13).
+  amended 2026-09-13). Every entry is a token contract that answers `decimals()` and nothing
+  else: USDT0's entry is its SAC, and its OFT bridge contract of §7.1 is no entry, only a
+  comment on the USDT0 entry with its provenance (amended 2026-10-26).
 - `sources`: RedStone's SEP-40 contract per network, with the feed name per token as a
   comment and, per feed, where and when its fundamental kind was confirmed (§7.2); a testnet
   entry only where RedStone publishes there; otherwise the testnet pool of A-002 runs on one
@@ -727,6 +741,11 @@ source for `chain-config/`.
 | deJTRSY | none: a Soroban token (LayerZero OFT, 18 decimals), created 2025-12-01 | `CBI7UCH5KGSVQRO5H4SUCZUTZABCITZLRHQQZTWL2TK4RZ72TAR6IHRV` | Centrifuge's own publication of the Stellar contract id: its documentation repository (`github.com/centrifuge/documentation`, `docs/developer/protocol/deployments/index.mdx`, commit `c69b51c87964e855be774f15640bfb732f9229ba`); the Soroswap token list, where the research took it from, is not an issuer publication | checked 2026-09-13 against that commit |
 | deJAAA | none; for the record only, no pool (ADR-007 point 3) | `CC64WBDGS6QQP22QTTIACYIXT3WF7BBQEYOQPLTP7GTKYY7PZ74QYGSL` | as deJTRSY | not in `chain-config/` |
 | CETES | `CETES:GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC` | `CAL6ER2TI6CTRAY6BFXWNWA7WTYXUXTQCHUBCIBU5O6KM3HJFG6Z6VXV` (RedStone's mapping) | as USTRY (`GET /lookup/stablebonds`) | not in `chain-config/` until CETES/MXNe is admitted |
+
+USDT0's token is the SAC; the OFT contract is the LayerZero bridge that mints and burns it
+on Stellar, not a token (it has no `decimals()`), and it stands in no `[tokens]` entry, only
+in the comment of the USDT0 entry with the provenance of this row (stated 2026-10-26, after
+`record-decimals.sh mainnet` stopped on it; A-002 §3.11).
 
 Look-alikes, never to be used: classic assets with the codes `deJTRSY` and `deJAAA` from the
 issuer `GA3XIPEQ622KSQB2OPQQLRDOYXHWKJTL2NNHIIP2NWFSXWBLZ4O7GFDV` (home domain `ultramint.org`),
