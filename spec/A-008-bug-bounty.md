@@ -16,7 +16,13 @@ listed from the first pool on; the list of known issues published before the fir
 each replaced at the first mainnet pool in a commit of its own, and §3.1 knows no contract
 in scope until then; §4 test 1 amended the same day: the page carries §7.1 byte for byte,
 each `SECURITY.md` the route, the five promises in short and the link to the page, not the
-text of §7.1 (as A-006 §3.12)
+text of §7.1 (as A-006 §3.12); §3.3 amended 2026-10-30: the page names the two public
+channels of Rhumb under the heading "official channels", announcement channels and no
+reporting route (decided 2026-10-23, A-006 §3.12); §7.1 amended 2026-10-30 (ADR-014 §10
+step 5, the three pools live): the two interim sentences lapse, the page lists the mainnet
+ids from the SDK's `networks.mainnet` (the router, three pools, four adapters), and the
+known issues are `KNOWN-ISSUES.md` of `rhumb-protocol/contracts`, created 2026-10-31, the
+link shown with "list follows" until then
 Target: the published rules of Rhumb's bug bounty (§7.1, the text of record), in
 `rhumb-protocol/app` as the page `/security`; in `rhumb-protocol/contracts`, `sdk` and `app`
 a `SECURITY.md` with the route of §3.3, the five promises of §3.3 in short and the link to
@@ -111,6 +117,15 @@ self-hosted. The owner asks Immunefi before the beta and the answer decides."
   beta, read by the owner) and GitHub's private vulnerability reporting, switched on in every
   public Rhumb repository. The page gives both; no report is taken in a public issue, a chat or
   a social network, and one that arrives there is answered with the route and nothing else.
+- The official channels, on the page (added 2026-10-30; decided 2026-10-23, A-006 §3.12):
+  under the heading "official channels" the page names the X account `@rhumbfinance` and
+  the public Discord server "Rhumb" as the places where an incident, a pause or a fix is
+  announced, with the explicit sentence that these channels are no reporting route: a
+  report goes to `security@rhumb.finance` or through GitHub's private vulnerability
+  reporting, and a report in a public channel is answered with the route and nothing else,
+  as above. The reporting routes do not change with this heading. No invite link of the
+  Discord server on the page or in any repository (A-006 §3.12); the words are words of
+  the app's `copy.ts`.
 - Our promises, on the page: an acknowledgement within 48 hours; a first assessment with the
   severity within 7 days; a fix, or the guardian's pause while one is made, as fast as the harm
   requires; coordinated disclosure after the fix or after 90 days, whichever is first, unless the
@@ -210,12 +225,11 @@ contracts can be named in scope, and a positive answer is an amendment of this s
 >
 > **In scope:** the contracts listed below on Stellar mainnet; the keeper and deploy scripts where
 > a defect exposes the keeper's key or makes a wrong price reach a pool; the SDK and the app where
-> a user signs something other than what was shown. No contract is in scope yet; the mainnet
-> contract ids are listed here from the first pool on.
+> a user signs something other than what was shown.
 >
 > **Out of scope:** testnet; third-party contracts, oracles, issuers, wallets and the Stellar
-> network; the known issues (the list of known issues is published here before the first
-> pool); the indexer and quote API; attacks that need a compromised
+> network; the known issues listed at
+> https://github.com/rhumb-protocol/contracts/blob/main/KNOWN-ISSUES.md; the indexer and quote API; attacks that need a compromised
 > governance or guardian key; phishing and social engineering; denial of service by volume; any
 > test on mainnet against funds that are not your own.
 >
@@ -242,6 +256,19 @@ pool on", and for `<link>` "the list of known issues is published here before th
 pool". Both sentences are replaced at the first mainnet pool, in a commit of their own,
 by the ids of `chain-config/mainnet.toml` and the address of the list; until then §3.1
 knows no contract in scope.
+Replaced 2026-10-30, the three pools of the beta live on mainnet since 2026-10-29 (ADR-014
+§10 step 5): both interim sentences lapse from the text of record above. Under the
+paragraph "In scope" the page `/security` lists the mainnet contract ids, "the contracts
+listed below": the router, the three pools (USDY/USDC, USTRY/USDC, PYUSD/USDC) and the
+four adapters, read from `networks.mainnet` of the pinned SDK (A-005 §7.1, the mirror of
+`chain-config/mainnet.toml`) and typed nowhere in the app, each with its name and its id as
+text with a copy button (A-006 §3.5); the test of A-006 §3.12 compares the page's ids with
+the SDK's constant, now that there are ids to compare. The list of known issues is the file
+`KNOWN-ISSUES.md` of `rhumb-protocol/contracts` at the address in the text, which the
+contracts session creates 2026-10-31 (the content of §3.1's third point); until that file
+exists the page may show the link with the words "list follows" beside it, and the words
+go when the file is there. The ids and the link change on the page only through this
+section, in a commit of its own, as before.
 Filled the same day: `<cap>` is $10 000, the cap of every pool in the beta (10 000 tokens);
 `<ceiling>` is $3 000, the critical ceiling of §3.4 (10 % of three caps of $10 000), which
 ADR-016 leaves unchanged (it binds a cap step to the funded ceiling, §3.4); `<route>` is the
