@@ -10,7 +10,7 @@ rust-version = "1.98.1"   # same value as rust-toolchain.toml
 
 [workspace.dependencies]
 # Exact versions only, never a caret or tilde. soroban-sdk follows the version the engine pins
-# in wadrock/core and is bumped only together with core.
+# and is bumped only together with the engine.
 soroban-sdk = "=27.0.6"
 proptest = { version = "=1.11.0", default-features = false, features = ["std"] }
 

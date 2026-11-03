@@ -1,8 +1,8 @@
 # contracts
 
 The rate adapters of Rhumb on Stellar, built by Wadrock Labs: the contracts through which the
-band pools of the engine read their prices. The engine itself lives in `wadrock/core` and is not
-copied here; these crates call the engine's contracts through their Wasm interfaces.
+band pools of the engine read their prices. The engine itself lives in the engine's repository
+and is not copied here; these crates call the engine's contracts through their Wasm interfaces.
 The contracts are unaudited and every pool runs in a capped beta; `KNOWN-ISSUES.md` is the
 list of known issues, which the bug bounty puts out of scope.
 

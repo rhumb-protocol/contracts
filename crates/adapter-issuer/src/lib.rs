@@ -43,9 +43,9 @@
 //!
 //! # Provenance
 //!
-//! Nothing here is ported. The adapter interface is read in `wadrock/core` (E-007 §5) and no
-//! engine code is copied; the TTL values are the reference values E-007 §3.1 states, restated
-//! here because this contract is not built from the engine's crates.
+//! Nothing here is ported. The adapter interface is read in the engine's repository (E-007 §5)
+//! and no engine code is copied; the TTL values are the reference values E-007 §3.1 states,
+//! restated here because this contract is not built from the engine's crates.
 
 #![no_std]
 #![forbid(unsafe_code)]

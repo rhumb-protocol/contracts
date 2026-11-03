@@ -25,10 +25,10 @@
 //!
 //! # Provenance
 //!
-//! Nothing here is ported. The layout is read in `wadrock/core` (E-007 §3.7) and written out
-//! above; the encoder and the reader are this crate's own, addressing each field at a fixed
-//! offset rather than walking a cursor, so that what a reader has to check is a table of
-//! numbers against that list and not the behaviour of a loop.
+//! Nothing here is ported. The layout is read in the engine's repository (E-007 §3.7) and
+//! written out above; the encoder and the reader are this crate's own, addressing each field at
+//! a fixed offset rather than walking a cursor, so that what a reader has to check is a table
+//! of numbers against that list and not the behaviour of a loop.
 
 use crate::abi::{RateConfigBytes, RateStateBytes, CONFIG_LEN, STATE_LEN};
 use soroban_sdk::{BytesN, Env};
