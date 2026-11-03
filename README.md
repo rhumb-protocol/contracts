@@ -3,6 +3,8 @@
 The rate adapters of Rhumb on Stellar, built by Wadrock Labs: the contracts through which the
 band pools of the engine read their prices. The engine itself lives in `wadrock/core` and is not
 copied here; these crates call the engine's contracts through their Wasm interfaces.
+The contracts are unaudited and every pool runs in a capped beta; `KNOWN-ISSUES.md` is the
+list of known issues, which the bug bounty puts out of scope.
 
 ## Layout
 - `crates/adapter-redstone/` — the rate adapter that wraps a SEP-40 price feed and hands a
@@ -102,8 +104,8 @@ public record starts with the first pull request after the split.
 
 ## Reporting a vulnerability
 Report a vulnerability privately, through GitHub's private vulnerability reporting on this
-repository (Security, then "Report a vulnerability"), and never in a public issue;
-the full rules follow with the bug bounty.
+repository (Security, then "Report a vulnerability"), and never in a public issue; the
+route, the promises and the link to the rules of the bug bounty are in `SECURITY.md`.
 
 ## Licence
 MIT, see LICENSE. Code taken from elsewhere names its origin, licence and commit hash in the
