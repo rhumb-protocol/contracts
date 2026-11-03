@@ -22,7 +22,13 @@ reporting route (decided 2026-10-23, A-006 §3.12); §7.1 amended 2026-10-30 (AD
 step 5, the three pools live): the two interim sentences lapse, the page lists the mainnet
 ids from the SDK's `networks.mainnet` (the router, three pools, four adapters), and the
 known issues are `KNOWN-ISSUES.md` of `rhumb-protocol/contracts`, created 2026-10-31, the
-link shown with "list follows" until then
+link shown with "list follows" until then; §7.1 amended 2026-10-31: the page lists the
+router and the three pools from `networks.mainnet` of the SDK, and the four adapters follow
+when the SDK exports the adapters per network (queued in A-005, an SDK pull request after
+the public day); §3.1 and §7.1 amended 2026-10-31: the scope is the contracts of
+`chain-config/mainnet.toml` in `ops` (the router, four adapters, three pools), whatever
+`/security` already lists, and the URL of `KNOWN-ISSUES.md` may stand as text in the `.js`
+bundle that renders `/security`
 Target: the published rules of Rhumb's bug bounty (§7.1, the text of record), in
 `rhumb-protocol/app` as the page `/security`; in `rhumb-protocol/contracts`, `sdk` and `app`
 a `SECURITY.md` with the route of §3.3, the five promises of §3.3 in short and the link to
@@ -66,7 +72,8 @@ researchers work with.
 ### 3.1 Scope
 
 In scope, on mainnet, at the contract ids of `chain-config/mainnet.toml` once deployed (the rules
-page lists them, and a contract that is not listed is not in scope):
+page lists them; amended 2026-10-31: the file and not the page bounds the scope, so a contract
+of the file is in scope whether or not the page lists it yet, §7.1):
 
 - The pool contract (both kinds), the router, the issuer adapter and the RedStone adapter:
   every severity of §7.2.
@@ -80,7 +87,7 @@ page lists them, and a contract that is not listed is not in scope):
 
 Out of scope, stated on the page:
 
-- Testnet, and every contract not listed.
+- Testnet, and every contract not in `chain-config/mainnet.toml`.
 - Third parties: the token contracts and their issuers, RedStone, the issuers' price
   publications, the Stellar network and its RPC providers, Soroswap and other venues, wallets.
 - The known issues, listed on the page and kept current: the findings of the published audit
@@ -269,6 +276,20 @@ contracts session creates 2026-10-31 (the content of §3.1's third point); until
 exists the page may show the link with the words "list follows" beside it, and the words
 go when the file is there. The ids and the link change on the page only through this
 section, in a commit of its own, as before.
+Amended 2026-10-31, from the app's mainnet build: `networks.mainnet` of the pinned SDK
+carries the router and the pools and no adapter ids, so the page lists the router and the
+three pools, each read from that constant as above, and the four adapters are not on the
+page yet. They follow when the SDK exports the adapters per network (queued in A-005, an
+SDK pull request after the public day of 2026-11-01), read from the SDK as the others and
+typed nowhere in the app; the test of A-006 §3.12 then compares them too.
+Amended 2026-10-31, the scope: "the contracts listed below" are the contracts of
+`chain-config/mainnet.toml` in `ops`, the router, the four adapters and the three pools,
+whatever the page `/security` already lists. The list on the page shows their ids; it does
+not bound the scope, so the four adapters are in scope from today although their ids are not
+on the page yet. The link: the page is rendered by script, so the URL
+`https://github.com/rhumb-protocol/contracts/blob/main/KNOWN-ISSUES.md` may stand as text in
+the `.js` bundle that renders `/security`; in the rendered page it is the `href` of the one
+`<a>`, and A-006 §4 test 7 still fails it everywhere else.
 Filled the same day: `<cap>` is $10 000, the cap of every pool in the beta (10 000 tokens);
 `<ceiling>` is $3 000, the critical ceiling of §3.4 (10 % of three caps of $10 000), which
 ADR-016 leaves unchanged (it binds a cap step to the funded ceiling, §3.4); `<route>` is the
