@@ -322,8 +322,8 @@ fn naming_the_sentinel_later_is_announced_and_set_a_day_after() {
 
 #[test]
 fn an_announcement_the_guardian_cancels_changes_no_role() {
-    // The local rollout announces in both sentinel shapes and cancels each (rollout-local.sh);
-    // what it relies on is that a cancelled announcement is never set.
+    // A deployment's dry run announces in both sentinel shapes and cancels each; what it
+    // relies on is that a cancelled announcement is never set.
     let Some(f) = Fixture::new() else { return };
     let before = f.pool().roles();
     f.pool().announce_roles(

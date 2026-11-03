@@ -123,9 +123,9 @@ jobs:
         run: scripts/tests/run.sh
 
   adapter-wasm:
-    # The artefact fetch-artefacts.sh downloads and checks against the sha256 this job's log
-    # prints. On a push to main only: an artefact of a branch is bytes nobody reviewed, and the
-    # [artefacts] table names a commit on main.
+    # A deployment downloads this artefact and checks it against the sha256 this job's log
+    # prints. On a push to main only: an artefact of a branch is bytes nobody reviewed, and a
+    # deployment's record names a commit on main.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
@@ -166,7 +166,7 @@ jobs:
             echo "$name.wasm: $before bytes before wasm-opt, $(wc -c < "artefacts/$name.wasm") bytes after"
           done
       - name: The sha256 of record
-        # This is the hash the [artefacts] table copies. The .sha256 files beside the Wasm are
+        # This is the hash a deployment's record copies. The .sha256 files beside the Wasm are
         # written for convenience and are never what a deployment trusts.
         run: |
           cd artefacts
@@ -181,10 +181,10 @@ jobs:
           path: artefacts/
 
   test-wasm:
-    # The SEP-40 mock, optimised and hashed by the rule of adapter-wasm: the local rollout deploys
-    # it, and a mock taken from CI bytes is a mock whose sha256 a reader can check in this job's
-    # log. It is a test crate with no key and is never deployed to a network whose contracts are
-    # kept. On a push to main only, as adapter-wasm.
+    # The SEP-40 mock, optimised and hashed by the rule of adapter-wasm: a deployment's dry run
+    # deploys it, and a mock taken from CI bytes is a mock whose sha256 a reader can check in
+    # this job's log. It is a test crate with no key and is never deployed to a network whose
+    # contracts are kept. On a push to main only, as adapter-wasm.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:

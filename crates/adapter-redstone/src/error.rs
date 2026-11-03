@@ -5,8 +5,8 @@
 //! codes are `3 ..= 21` and `100 ..= 12x`. The second half does not, and the reason is worth
 //! writing down rather than repeating. The router's own codes are `200 ..= 214`, but the
 //! errors of its planner, which the router surfaces, are `300 ..= 304` (the error enums of the
-//! router and its planner in `wadrock/core`), so the adapters' block overlaps the router's
-//! planner block exactly.
+//! router and its planner in the engine's repository), so the adapters' block overlaps the
+//! router's planner block exactly.
 //!
 //! On chain this changes nothing. A Soroban contract error is scoped to the contract that
 //! raised it, an adapter and the router never appear in one call tree -- `refresh` reads the
@@ -14,7 +14,7 @@
 //! a client reads the code together with the contract it came from. So the numbers are kept
 //! and the premise is corrected here rather than the codes renumbered: renumbering would
 //! change this Wasm's interface for a collision that cannot occur, and the premise is the
-//! spec's, which is the brain's to amend. The question has been written down for it.
+//! spec's, which governance amends. The question has been written down for it.
 //!
 //! The block is shared across the two adapters, so that one number never means two things
 //! *here*: `300` `BadPrice`, `301` `NotNewer`, `302` `FromTheFuture`, `303` `BadDecimals`.

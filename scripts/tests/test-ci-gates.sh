@@ -226,7 +226,7 @@ assert_ok "a file CI runs directly may reach report_counts past a cleanup named 
 rm -rf "$dir"
 
 # And the security reviewer's: a compound action whose second command is a function that exits
-# (the spelling test-install-service.sh uses, with a function that returns); a function written
+# (a spelling seen in another test suite, with a function that returns); a function written
 # on one line; a function body too large for one pipe buffer, where a check that pipes the body
 # into `grep -q` under pipefail loses the `exit` it is looking for.
 # shellcheck disable=SC2016

@@ -27,9 +27,9 @@
 //! # Provenance
 //!
 //! Nothing here is ported. The pool's interface and the layout of the encoded rate config and
-//! rate state are read in `wadrock/core` (E-007 §3.2, §3.7) and written out here in this
-//! crate's own words; the reference values of the configurations are the ones spec A-001 §7.4
-//! states for USDY.
+//! rate state are read in the engine's repository (E-007 §3.2, §3.7) and written out here in
+//! this crate's own words; the reference values of the configurations are the ones spec A-001
+//! §7.4 states for USDY.
 
 #![no_std]
 #![forbid(unsafe_code)]

@@ -16,7 +16,7 @@
 //!
 //! There is deliberately no arithmetic in this crate: not a scaling, not a unit conversion,
 //! not a comparison against a previous value. The timestamp is passed through in whatever
-//! unit the feed publishes; see the crate README on the unit RedStone's mainnet feed uses.
+//! unit the feed publishes.
 //!
 //! # Immutability
 //!
@@ -43,8 +43,8 @@
 //! # Provenance
 //!
 //! Nothing here is ported. The SEP-40 types follow the published standard (Stellar Ecosystem
-//! Proposal 40); the engine's interface is read in `wadrock/core` (E-007 §5) and no engine
-//! code is copied.
+//! Proposal 40); the engine's interface is read in the engine's repository (E-007 §5) and no
+//! engine code is copied.
 
 #![no_std]
 #![forbid(unsafe_code)]
